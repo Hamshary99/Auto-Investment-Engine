@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.env
+*.log
+.DS_Store
+coverage/
+services/portfolio-service/PORTFOLIO_SERVICE.md
+services/portfolio-service/portfolio-service.postman_collection.json
+.claude/
