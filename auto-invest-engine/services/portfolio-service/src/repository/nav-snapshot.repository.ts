@@ -1,6 +1,6 @@
 import { EntityManager, Repository } from "typeorm";
 import { AppDataSource } from "../data-source";
-import { NavSnapshot } from "../entities/NavSnapshot";
+import { NavSnapshot } from "../models/nav-snapshot.model";
 
 export class NavSnapshotRepository {
   private repo(tx?: EntityManager): Repository<NavSnapshot> {

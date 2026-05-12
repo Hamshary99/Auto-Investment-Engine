@@ -1,4 +1,4 @@
-import { ProcessedMessageRepository } from "../../src/repositories/processed-message.repository";
+import { ProcessedMessageRepository } from "../../src/repository/processed-message.repository";
 
 export class FakeProcessedMessageRepository extends ProcessedMessageRepository {
   public seen = new Set<string>();

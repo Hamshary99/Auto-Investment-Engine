@@ -1,13 +1,18 @@
 import { Router } from "express";
 import { buildAuthController } from "../controllers/auth.controller";
-import { requireAuth } from "../middleware/jwt.middleware";
+import { requireAuth } from "../middleware/auth.middleware";
+import { validate } from "../middleware/validate";
+import { RegisterUserDto } from "../dto/register-user.dto";
+import { LoginUserDto } from "../dto/login-user.dto";
 import { AuthService } from "../services/auth.service";
 
 export const buildAuthRouter = (auth: AuthService) => {
-  const r = Router();
+  const router = Router();
   const c = buildAuthController(auth);
-  r.post("/register", c.register);
-  r.post("/login", c.login);
-  r.get("/me", requireAuth, c.me);
-  return r;
+
+  router.post("/register", validate(RegisterUserDto), c.postRegister);
+  router.post("/login",    validate(LoginUserDto),    c.postLogin);
+  router.get("/me",        requireAuth,               c.getMe);
+
+  return router;
 };

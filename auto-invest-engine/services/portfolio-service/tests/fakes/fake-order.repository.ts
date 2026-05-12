@@ -1,6 +1,6 @@
 import { randomUUID } from "crypto";
-import { Order } from "../../src/entities/Order";
-import { OrderRepository } from "../../src/repositories/order.repository";
+import { Order } from "../../src/models/order.model";
+import { OrderRepository } from "../../src/repository/order.repository";
 
 export class FakeOrderRepository extends OrderRepository {
   private byId = new Map<string, Order>();
@@ -15,9 +15,7 @@ export class FakeOrderRepository extends OrderRepository {
   }
 
   async findStuckPending(cutoff: Date): Promise<Order[]> {
-    return [...this.byId.values()].filter(
-      (o) => o.status === "PENDING" && o.createdAt < cutoff
-    );
+    return [...this.byId.values()].filter((o) => o.status === "PENDING" && o.createdAt < cutoff);
   }
 
   async save(o: Order): Promise<Order> {
@@ -42,7 +40,6 @@ export class FakeOrderRepository extends OrderRepository {
     return o;
   }
 
-  // test helpers
   all(): Order[] { return [...this.byId.values()]; }
   seed(o: Order) { this.byId.set(o.id, o); }
 }

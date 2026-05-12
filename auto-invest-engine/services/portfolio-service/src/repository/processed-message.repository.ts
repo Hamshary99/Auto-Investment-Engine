@@ -1,6 +1,6 @@
 import { EntityManager, Repository } from "typeorm";
 import { AppDataSource } from "../data-source";
-import { ProcessedMessage } from "../entities/ProcessedMessage";
+import { ProcessedMessage } from "../models/processed-message.model";
 
 export class ProcessedMessageRepository {
   private repo(tx?: EntityManager): Repository<ProcessedMessage> {

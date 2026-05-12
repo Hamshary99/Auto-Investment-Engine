@@ -5,5 +5,8 @@ module.exports = {
   moduleNameMapper: {
     "^@auto-invest/shared$": "<rootDir>/../../shared/src/index.ts",
   },
+  globals: {
+    "ts-jest": { tsconfig: "<rootDir>/tsconfig.test.json" },
+  },
   clearMocks: true,
 };

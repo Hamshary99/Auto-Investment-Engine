@@ -1,6 +1,6 @@
 import { EntityManager, LessThan, Repository } from "typeorm";
 import { AppDataSource } from "../data-source";
-import { Order } from "../entities/Order";
+import { Order } from "../models/order.model";
 
 export class OrderRepository {
   private repo(tx?: EntityManager): Repository<Order> {

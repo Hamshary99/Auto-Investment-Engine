@@ -1,0 +1,47 @@
+{
+  "name": "auto-invest-engine",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Root orchestration scripts for the auto-invest-engine monorepo.",
+  "scripts": {
+    "setup": "npm run env:check && npm run install:all",
+    "env:check": "node scripts/env-check.js",
+
+    "install:all": "npm run install:shared && npm run install:auth && npm run install:portfolio && npm run install:scheduler && npm run install:app",
+    "install:shared":    "npm --prefix shared install",
+    "install:auth":      "npm --prefix services/auth-service install",
+    "install:portfolio": "npm --prefix services/portfolio-service install",
+    "install:scheduler": "npm --prefix services/scheduler-service install",
+    "install:app":       "npm --prefix services/app-service install",
+
+    "build:all": "npm run build:shared && npm run build:auth && npm run build:portfolio && npm run build:scheduler && npm run build:app",
+    "build:shared":    "npm --prefix shared run build",
+    "build:auth":      "npm --prefix services/auth-service run build",
+    "build:portfolio": "npm --prefix services/portfolio-service run build",
+    "build:scheduler": "npm --prefix services/scheduler-service run build",
+    "build:app":       "npm --prefix services/app-service run build",
+
+    "test": "npm run test:shared && npm run test:auth && npm run test:portfolio",
+    "test:shared":    "npm --prefix shared test",
+    "test:auth":      "npm --prefix services/auth-service test",
+    "test:portfolio": "npm --prefix services/portfolio-service test",
+
+    "up":         "docker compose up --build -d",
+    "up:fg":      "docker compose up --build",
+    "down":       "docker compose down",
+    "down:clean": "docker compose down -v",
+    "restart":    "docker compose restart",
+    "ps":         "docker compose ps",
+    "logs":       "docker compose logs -f --tail=100",
+    "logs:auth":      "docker compose logs -f --tail=100 auth-service",
+    "logs:portfolio": "docker compose logs -f --tail=100 portfolio-service",
+    "logs:scheduler": "docker compose logs -f --tail=100 scheduler-service",
+    "logs:app":       "docker compose logs -f --tail=100 app-service",
+
+    "psql":   "docker compose exec postgres psql -U invest -d auto_invest",
+    "rabbit": "echo Open http://localhost:15672 (user/pass from .env)",
+    "health": "curl -s http://localhost:8080/health || echo gateway not reachable",
+
+    "clean": "node scripts/clean.js"
+  }
+}

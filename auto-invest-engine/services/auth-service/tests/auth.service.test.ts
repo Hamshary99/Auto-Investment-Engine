@@ -3,7 +3,7 @@ import bcrypt from "bcrypt";
 import { AuthService } from "../src/services/auth.service";
 import { FakeUserRepository } from "./fake-user.repository";
 import { config } from "../src/config";
-import { ConflictError, UnauthorizedError, ValidationError } from "@auto-invest/shared";
+import { ApiError } from "../src/utils/error.handler";
 
 describe("AuthService", () => {
   let users: FakeUserRepository;
@@ -19,57 +19,51 @@ describe("AuthService", () => {
   // ────────────────────────────────────────────────────────────────
   describe("register", () => {
     it("creates a user and returns id + email + valid JWT", async () => {
-      // INPUT
-      const email = "alice@example.com";
-      const password = "hunter22!";
+      // ── INPUT ───────────────────────────────────────────────────
+      const input = { email: "alice@example.com", password: "hunter22!" };
 
-      // ACT
-      const result = await auth.register(email, password);
+      // ── ACT ─────────────────────────────────────────────────────
+      const result = await auth.register(input.email, input.password);
 
-      // OUTPUT
+      // ── EXPECTED OUTPUT ─────────────────────────────────────────
+      // { id, email: "alice@example.com", token: <jwt with sub=id and email=input.email> }
       expect(result).toEqual({
         id: expect.any(String),
         email: "alice@example.com",
         token: expect.any(String),
       });
-      // JWT decodes to the right subject
       const decoded = jwt.verify(result.token, config.jwtSecret) as jwt.JwtPayload;
       expect(decoded.sub).toBe(result.id);
-      expect(decoded.email).toBe(email);
-
-      // user is persisted
+      expect(decoded.email).toBe(input.email);
       expect(users.size()).toBe(1);
     });
 
     it("stores a bcrypt hash, not the plaintext password", async () => {
-      // INPUT
-      const password = "plaintextpw!";
-      // ACT
-      await auth.register("bob@example.com", password);
-      // OUTPUT
-      const stored = await users.findByEmail("bob@example.com");
-      expect(stored!.passwordHash).not.toBe(password);
-      expect(stored!.passwordHash).toMatch(/^\$2[aby]\$/); // bcrypt prefix
-      await expect(bcrypt.compare(password, stored!.passwordHash)).resolves.toBe(true);
+      // ── INPUT ───────────────────────────────────────────────────
+      const input = { email: "bob@example.com", password: "plaintextpw!" };
+
+      // ── ACT ─────────────────────────────────────────────────────
+      await auth.register(input.email, input.password);
+
+      // ── EXPECTED OUTPUT ─────────────────────────────────────────
+      // stored.passwordHash starts with "$2a$" / "$2b$" / "$2y$" and verifies against input.password
+      const stored = await users.findByEmail(input.email);
+      expect(stored!.passwordHash).not.toBe(input.password);
+      expect(stored!.passwordHash).toMatch(/^\$2[aby]\$/);
+      await expect(bcrypt.compare(input.password, stored!.passwordHash)).resolves.toBe(true);
     });
 
-    it.each([
-      // [label, email, password]
-      ["missing email",          "",                  "validpass1"],
-      ["missing password",       "x@y.com",           ""],
-      ["password too short (7)", "x@y.com",           "1234567"],
-    ])("rejects %s with ValidationError", async (_label, email, password) => {
-      // INPUT → expected OUTPUT
-      await expect(auth.register(email, password)).rejects.toBeInstanceOf(ValidationError);
-      expect(users.size()).toBe(0);
-    });
-
-    it("rejects duplicate email with ConflictError", async () => {
-      // INPUT: register the same email twice
+    it("rejects duplicate email with ApiError(409, 'conflict')", async () => {
+      // ── INPUT ───────────────────────────────────────────────────
+      // register the same email twice
       await auth.register("dup@example.com", "firstpass1");
-      // ACT + OUTPUT
-      await expect(auth.register("dup@example.com", "secondpass2"))
-        .rejects.toBeInstanceOf(ConflictError);
+
+      // ── ACT + EXPECTED OUTPUT ───────────────────────────────────
+      // throws ApiError with statusCode 409 / type "conflict"
+      const err = await auth.register("dup@example.com", "secondpass2").catch((e) => e);
+      expect(err).toBeInstanceOf(ApiError);
+      expect(err.statusCode).toBe(409);
+      expect(err.type).toBe("conflict");
       expect(users.size()).toBe(1);
     });
   });
@@ -86,46 +80,56 @@ describe("AuthService", () => {
     });
 
     it("returns id + email + JWT for correct credentials", async () => {
-      // ACT
-      const result = await auth.login(email, password);
-      // OUTPUT
+      // ── INPUT ───────────────────────────────────────────────────
+      const input = { email, password };
+
+      // ── ACT ─────────────────────────────────────────────────────
+      const result = await auth.login(input.email, input.password);
+
+      // ── EXPECTED OUTPUT ─────────────────────────────────────────
+      // { id, email, token } — token decodes to sub=id
       expect(result.email).toBe(email);
-      expect(result.id).toEqual(expect.any(String));
       const decoded = jwt.verify(result.token, config.jwtSecret) as jwt.JwtPayload;
       expect(decoded.sub).toBe(result.id);
     });
 
-    it("rejects unknown email with UnauthorizedError", async () => {
-      await expect(auth.login("ghost@example.com", password))
-        .rejects.toBeInstanceOf(UnauthorizedError);
+    it("rejects unknown email with ApiError(401, 'unauthorized')", async () => {
+      const err = await auth.login("ghost@example.com", password).catch((e) => e);
+      expect(err).toBeInstanceOf(ApiError);
+      expect(err.statusCode).toBe(401);
+      expect(err.type).toBe("unauthorized");
     });
 
-    it("rejects wrong password with UnauthorizedError", async () => {
-      await expect(auth.login(email, "wrongpass1"))
-        .rejects.toBeInstanceOf(UnauthorizedError);
+    it("rejects wrong password with ApiError(401, 'unauthorized')", async () => {
+      const err = await auth.login(email, "wrongpass1").catch((e) => e);
+      expect(err).toBeInstanceOf(ApiError);
+      expect(err.statusCode).toBe(401);
     });
 
-    it("uses the same error type for both wrong-email and wrong-password (no user enumeration)", async () => {
-      // SECURITY: callers must not be able to tell which one was wrong
-      const e1 = await auth.login("ghost@example.com", password).catch((e) => e);
-      const e2 = await auth.login(email, "wrongpass1").catch((e) => e);
-      expect(e1.constructor).toBe(e2.constructor);
-      expect(e1.message).toBe(e2.message);
+    it("uses the same error for wrong-email vs wrong-password (no user enumeration)", async () => {
+      // ── INPUT ───────────────────────────────────────────────────
+      // case A: unknown email
+      // case B: correct email + wrong password
+      const a = await auth.login("ghost@example.com", password).catch((e) => e);
+      const b = await auth.login(email, "wrongpass1").catch((e) => e);
+
+      // ── EXPECTED OUTPUT ─────────────────────────────────────────
+      // same class, same statusCode, same message — caller cannot distinguish
+      expect(a.constructor).toBe(b.constructor);
+      expect(a.statusCode).toBe(b.statusCode);
+      expect(a.message).toBe(b.message);
     });
   });
 
   // ────────────────────────────────────────────────────────────────
-  // token shape
+  // issued JWTs
   // ────────────────────────────────────────────────────────────────
   describe("issued JWTs", () => {
-    it("contain sub, email, iat, exp and verify with the configured secret", async () => {
+    it("contain sub + email + iat + exp and verify with the configured secret", async () => {
       const result = await auth.register("dave@example.com", "davepass1");
       const decoded = jwt.verify(result.token, config.jwtSecret) as jwt.JwtPayload;
 
-      expect(decoded).toMatchObject({
-        sub: result.id,
-        email: "dave@example.com",
-      });
+      expect(decoded).toMatchObject({ sub: result.id, email: "dave@example.com" });
       expect(decoded.iat).toEqual(expect.any(Number));
       expect(decoded.exp).toEqual(expect.any(Number));
       expect(decoded.exp! - decoded.iat!).toBeGreaterThan(0);

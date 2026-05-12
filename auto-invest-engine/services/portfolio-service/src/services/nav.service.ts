@@ -1,11 +1,12 @@
-import { Holding } from "../entities/Holding";
-import { PortfolioRepository } from "../repositories/portfolio.repository";
-import { NavSnapshotRepository } from "../repositories/nav-snapshot.repository";
-import { cash, d } from "../money";
+import { Holding } from "../models/holding.model";
+import { PortfolioRepository } from "../repository/portfolio.repository";
+import { NavSnapshotRepository } from "../repository/nav-snapshot.repository";
+import { cash, d } from "../utils/money";
 
 /**
- * Daily NAV = cash + sum(holding.qty * markPrice). In a real system markPrice
- * comes from a market-data service; here we mock it as avgCost * 1.0 for demo.
+ * Daily NAV (Net Asset Value) = cash + Σ(holding.qty × markPrice).
+ * In a real system markPrice comes from a market-data service;
+ * here we stub it as the holding's average cost.
  */
 export class NavService {
   constructor(
@@ -13,17 +14,18 @@ export class NavService {
     private readonly snapshots: NavSnapshotRepository
   ) {}
 
+  /** Compute and persist a NAV row per portfolio. Re-runs for the same date are no-ops. */
   async snapshotAll(forDate: string): Promise<number> {
     const portfolios = await this.portfolios.findAllWithHoldings();
     for (const p of portfolios) {
-      const nav = p.holdings.reduce(
-        (s, h) => s.plus(d(h.quantity).times(markPrice(h))),
+      const navValue = p.holdings.reduce(
+        (sum, h) => sum.plus(d(h.quantity).times(markPrice(h))),
         d(p.cashBalance)
       );
       await this.snapshots.insertIgnoreOnConflict({
         portfolioId: p.id,
         forDate,
-        navValue: cash(nav),
+        navValue: cash(navValue),
       });
     }
     return portfolios.length;

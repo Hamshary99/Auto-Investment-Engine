@@ -5,7 +5,9 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
-    "dev": "ts-node-dev --respawn src/index.ts"
+    "dev": "ts-node-dev --respawn src/index.ts",
+    "test": "jest",
+    "test:watch": "jest --watch"
   },
   "dependencies": {
     "@auto-invest/shared": "file:../../shared",
@@ -15,9 +17,12 @@
   },
   "devDependencies": {
     "@types/amqplib": "^0.10.5",
+    "@types/jest": "^29.5.14",
     "@types/node": "^22.9.0",
     "@types/node-cron": "^3.0.11",
     "@types/uuid": "^10.0.0",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.2.5",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.6.3"
   }

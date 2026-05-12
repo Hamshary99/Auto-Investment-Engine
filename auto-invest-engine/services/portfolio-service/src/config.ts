@@ -1,8 +1,6 @@
 export const config = {
   port: parseInt(process.env.PORTFOLIO_PORT || "3002", 10),
   jwtSecret: process.env.JWT_SECRET || "dev-secret",
-  internalSecret: process.env.INTERNAL_AUTH_SECRET || "dev-internal-secret",
-  internalTokenTtlMs: parseInt(process.env.INTERNAL_AUTH_TTL_MS || "30000", 10),
   rabbit: {
     url: process.env.RABBITMQ_URL || "amqp://localhost",
     exchange: process.env.RABBITMQ_EXCHANGE || "auto-invest.events",

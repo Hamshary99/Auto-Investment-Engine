@@ -1,7 +1,7 @@
 import { EntityManager, Repository } from "typeorm";
 import { AppDataSource } from "../data-source";
-import { Holding } from "../entities/Holding";
-import { Portfolio } from "../entities/Portfolio";
+import { Holding } from "../models/holding.model";
+import { Portfolio } from "../models/portfolio.model";
 
 export class HoldingRepository {
   private repo(tx?: EntityManager): Repository<Holding> {

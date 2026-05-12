@@ -1,17 +1,24 @@
 import { AppDataSource } from "../data-source";
 import { OrderService } from "../services/order.service";
-import { ProcessedMessageRepository } from "../repositories/processed-message.repository";
+import { ProcessedMessageRepository } from "../repository/processed-message.repository";
+import { config } from "../config";
+import { logger } from "../utils/logger";
 import {
   EventEnvelope,
   OrderCreatedPayload,
   RabbitContext,
   ROUTING_KEYS,
   startConsumer,
-  createLogger,
 } from "@auto-invest/shared";
 
-const log = createLogger("order-exec-consumer");
-
+/**
+ * Consumes `order.created` events and runs the fill within a single Postgres
+ * transaction:
+ *   1. Insert messageId into the inbox  → idempotency guard (PK violation = duplicate)
+ *   2. OrderService.executeOrderTx      → state machine + holdings/cash updates
+ * If anything throws, the whole tx rolls back, including the inbox row, so a
+ * retry can re-process the message.
+ */
 export async function startOrderExecutionConsumer(
   ctx: RabbitContext,
   orders: OrderService,
@@ -22,13 +29,16 @@ export async function startOrderExecutionConsumer(
     {
       queue: "portfolio.order-execution",
       routingKeys: [ROUTING_KEYS.ORDER_CREATED],
-      prefetch: parseInt(process.env.CONSUMER_PREFETCH || "10", 10),
-      maxRetries: parseInt(process.env.CONSUMER_MAX_RETRIES || "3", 10),
+      prefetch: config.rabbit.prefetch,
+      maxRetries: config.rabbit.maxRetries,
     },
     async (env: EventEnvelope<OrderCreatedPayload>) => {
       await AppDataSource.transaction(async (tx) => {
         const firstTime = await inbox.markProcessed(env.messageId, env.type, tx);
-        if (!firstTime) { log.info({ messageId: env.messageId }, "duplicate, skipping"); return; }
+        if (!firstTime) {
+          logger.info({ messageId: env.messageId }, "duplicate order.created, skipping");
+          return;
+        }
         const fillPrice = env.payload.priceHint ?? mockMarketPrice(env.payload.symbol);
         await orders.executeOrderTx(tx, env.payload.orderId, fillPrice);
       });
@@ -36,6 +46,7 @@ export async function startOrderExecutionConsumer(
   );
 }
 
+/** Deterministic stand-in for a real market-data lookup. Same symbol → same price. */
 function mockMarketPrice(symbol: string): number {
   const seed = [...symbol].reduce((a, c) => a + c.charCodeAt(0), 0);
   return 50 + (seed % 450);
