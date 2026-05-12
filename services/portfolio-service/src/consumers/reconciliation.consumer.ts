@@ -1,15 +1,13 @@
 import { ReconciliationService } from "../services/reconciliation.service";
-import { ProcessedMessageRepository } from "../repositories/processed-message.repository";
+import { ProcessedMessageRepository } from "../repository/processed-message.repository";
+import { logger } from "../utils/logger";
 import {
   EventEnvelope,
   RabbitContext,
   ReconciliationRequestedPayload,
   ROUTING_KEYS,
   startConsumer,
-  createLogger,
 } from "@auto-invest/shared";
-
-const log = createLogger("recon-consumer");
 
 export async function startReconciliationConsumer(
   ctx: RabbitContext,
@@ -24,9 +22,13 @@ export async function startReconciliationConsumer(
     },
     async (env: EventEnvelope<ReconciliationRequestedPayload>) => {
       const firstTime = await inbox.markProcessed(env.messageId, env.type);
-      if (!firstTime) { log.info({ messageId: env.messageId }, "duplicate, skipping"); return; }
-      const res = await recon.runForDate(env.payload.forDate ?? new Date().toISOString().slice(0, 10));
-      log.info({ ...res }, "reconciliation finished");
+      if (!firstTime) {
+        logger.info({ messageId: env.messageId }, "duplicate reconciliation.requested, skipping");
+        return;
+      }
+      const forDate = env.payload.forDate ?? new Date().toISOString().slice(0, 10);
+      const res = await recon.runForDate(forDate);
+      logger.info({ ...res }, "reconciliation finished");
     }
   );
 }

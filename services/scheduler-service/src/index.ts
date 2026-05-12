@@ -1,28 +1,31 @@
 import cron from "node-cron";
+import { connectRabbit, Publisher } from "@auto-invest/shared";
 import { config } from "./config";
-import { runNavSnapshotJob } from "./jobs/nav-snapshot.job";
-import { runReconciliationJob } from "./jobs/reconciliation.job";
-import { runOrderSweepJob } from "./jobs/order-sweep.job";
-import { connectRabbit, createLogger, Publisher } from "@auto-invest/shared";
-
-const log = createLogger("scheduler-service");
+import { SchedulerService } from "./services/scheduler.service";
+import { logger } from "./utils/logger";
 
 async function main() {
+  // rabbit
   const rabbit = await connectRabbit(config.rabbit.url, config.rabbit.exchange);
   const publisher = new Publisher(rabbit);
 
-  cron.schedule(config.cron.navSnapshot, () => safe("nav", () => runNavSnapshotJob(publisher)));
-  cron.schedule(config.cron.reconciliation, () => safe("recon", () => runReconciliationJob(publisher)));
-  cron.schedule(config.cron.orderSweep, () => safe("sweep", () => runOrderSweepJob(publisher)));
+  // composition root
+  const scheduler = new SchedulerService(publisher);
 
-  log.info({ ...config.cron }, "scheduler-service started");
+  // cron — every tick wraps the job in safe() so a failure doesn't kill the cron
+  cron.schedule(config.cron.navSnapshot,    () => safe("nav-snapshot",    () => scheduler.requestNavSnapshot()));
+  cron.schedule(config.cron.reconciliation, () => safe("reconciliation", () => scheduler.requestReconciliation()));
+  cron.schedule(config.cron.orderSweep,     () => safe("order-sweep",    () => scheduler.requestOrderSweep()));
+
+  logger.info({ ...config.cron }, "scheduler-service started");
 }
 
 async function safe(name: string, fn: () => Promise<void>) {
-  try { await fn(); } catch (err) { log.error({ err, name }, "job failed"); }
+  try { await fn(); }
+  catch (err) { logger.error({ err, job: name }, "job failed"); }
 }
 
-main().catch((err) => {
-  log.error({ err }, "fatal");
-  process.exit(1);
-});
+process.on("uncaughtException", (err) => { logger.error({ err }, "uncaughtException"); process.exit(1); });
+process.on("unhandledRejection", (err) => { logger.error({ err }, "unhandledRejection"); process.exit(1); });
+
+main().catch((err) => { logger.error({ err }, "fatal"); process.exit(1); });

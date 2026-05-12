@@ -26,7 +26,7 @@ async function buildHarness() {
   const orderService = new OrderService(orders, portfolios, holdings, publisher);
 
   await startOrderExecutionConsumer(ctx, orderService, inbox);
-  const pendingOrder = await orderService.createOrder(USER, { symbol: "AAPL", side: "BUY", quantity: 10 });
+  const pendingOrder = await orderService.placeOrder(USER, { symbol: "AAPL", side: "BUY", quantity: 10 });
   return { channel, orders, portfolios, holdings, inbox, pendingOrder };
 }
 

@@ -1,8 +1,7 @@
-import { NavSnapshot } from "../../src/entities/NavSnapshot";
-import { NavSnapshotRepository } from "../../src/repositories/nav-snapshot.repository";
+import { NavSnapshot } from "../../src/models/nav-snapshot.model";
+import { NavSnapshotRepository } from "../../src/repository/nav-snapshot.repository";
 
 export class FakeNavSnapshotRepository extends NavSnapshotRepository {
-  // composite key: portfolioId|forDate
   private byKey = new Map<string, NavSnapshot>();
 
   insertIgnoreOnConflict(input: { portfolioId: string; forDate: string; navValue: string }): any {
@@ -25,6 +24,5 @@ export class FakeNavSnapshotRepository extends NavSnapshotRepository {
     return all.sort((a, b) => b.forDate.localeCompare(a.forDate))[0];
   }
 
-  // test helper
   all(): NavSnapshot[] { return [...this.byKey.values()]; }
 }

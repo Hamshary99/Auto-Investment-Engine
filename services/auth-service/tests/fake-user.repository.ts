@@ -1,11 +1,10 @@
 import { randomUUID } from "crypto";
-import { User } from "../src/entities/User";
-import { UserRepository } from "../src/repositories/user.repository";
+import { User } from "../src/models/user.model";
+import { UserRepository } from "../src/repository/user.repository";
 
 /**
  * In-memory stand-in for UserRepository. Same shape as the real one, but
- * backed by a Map — no Postgres needed. Lets us unit-test AuthService
- * without spinning up a DB.
+ * backed by a Map — no Postgres needed.
  */
 export class FakeUserRepository extends UserRepository {
   private byEmail = new Map<string, User>();
@@ -31,7 +30,6 @@ export class FakeUserRepository extends UserRepository {
     return user;
   }
 
-  // test-only helpers
   size(): number { return this.byEmail.size; }
   reset(): void { this.byEmail.clear(); this.byId.clear(); }
 }

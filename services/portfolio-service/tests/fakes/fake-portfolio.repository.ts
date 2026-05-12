@@ -1,6 +1,6 @@
 import { randomUUID } from "crypto";
-import { Portfolio } from "../../src/entities/Portfolio";
-import { PortfolioRepository } from "../../src/repositories/portfolio.repository";
+import { Portfolio } from "../../src/models/portfolio.model";
+import { PortfolioRepository } from "../../src/repository/portfolio.repository";
 
 export class FakePortfolioRepository extends PortfolioRepository {
   private byId = new Map<string, Portfolio>();

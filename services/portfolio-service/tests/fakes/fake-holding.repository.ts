@@ -1,10 +1,10 @@
 import { randomUUID } from "crypto";
-import { Holding } from "../../src/entities/Holding";
-import { Portfolio } from "../../src/entities/Portfolio";
-import { HoldingRepository } from "../../src/repositories/holding.repository";
+import { Holding } from "../../src/models/holding.model";
+import { Portfolio } from "../../src/models/portfolio.model";
+import { HoldingRepository } from "../../src/repository/holding.repository";
 
 export class FakeHoldingRepository extends HoldingRepository {
-  private byKey = new Map<string, Holding>(); // key: portfolioId:symbol
+  private byKey = new Map<string, Holding>();
 
   private k(portfolioId: string, symbol: string) { return `${portfolioId}:${symbol}`; }
 
@@ -28,7 +28,6 @@ export class FakeHoldingRepository extends HoldingRepository {
     };
   }
 
-  // test helper
   get(portfolioId: string, symbol: string): Holding | undefined {
     return this.byKey.get(this.k(portfolioId, symbol));
   }

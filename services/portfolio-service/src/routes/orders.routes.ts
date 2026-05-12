@@ -1,12 +1,16 @@
 import { Router } from "express";
-import { requireAuth } from "../middleware/jwt.middleware";
-import { OrderService } from "../services/order.service";
 import { buildOrdersController } from "../controllers/orders.controller";
+import { requireAuth } from "../middleware/auth.middleware";
+import { validate } from "../middleware/validate";
+import { PlaceOrderDto } from "../dto/place-order.dto";
+import { OrderService } from "../services/order.service";
 
 export const buildOrdersRouter = (orders: OrderService) => {
-  const r = Router();
+  const router = Router();
   const c = buildOrdersController(orders);
-  r.post("/orders", requireAuth, c.create);
-  r.get("/orders/:id", requireAuth, c.get);
-  return r;
+
+  router.post("/orders",    requireAuth, validate(PlaceOrderDto), c.postOrder);
+  router.get("/orders/:id", requireAuth,                          c.getOrder);
+
+  return router;
 };
