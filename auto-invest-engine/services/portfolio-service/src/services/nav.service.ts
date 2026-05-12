@@ -1,6 +1,7 @@
 import { Holding } from "../entities/Holding";
 import { PortfolioRepository } from "../repositories/portfolio.repository";
 import { NavSnapshotRepository } from "../repositories/nav-snapshot.repository";
+import { cash, d } from "../money";
 
 /**
  * Daily NAV = cash + sum(holding.qty * markPrice). In a real system markPrice
@@ -15,11 +16,14 @@ export class NavService {
   async snapshotAll(forDate: string): Promise<number> {
     const portfolios = await this.portfolios.findAllWithHoldings();
     for (const p of portfolios) {
-      const nav = Number(p.cashBalance) + p.holdings.reduce((s, h) => s + Number(h.quantity) * markPrice(h), 0);
+      const nav = p.holdings.reduce(
+        (s, h) => s.plus(d(h.quantity).times(markPrice(h))),
+        d(p.cashBalance)
+      );
       await this.snapshots.insertIgnoreOnConflict({
         portfolioId: p.id,
         forDate,
-        navValue: nav.toFixed(2),
+        navValue: cash(nav),
       });
     }
     return portfolios.length;
@@ -32,7 +36,7 @@ export class NavService {
   }
 }
 
-function markPrice(h: Holding): number {
-  // demo stub
-  return Number(h.avgCost);
+function markPrice(h: Holding): string {
+  // demo stub — real impl would fetch a live mark from a market-data service.
+  return h.avgCost;
 }

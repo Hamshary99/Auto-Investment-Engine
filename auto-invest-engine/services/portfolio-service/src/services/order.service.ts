@@ -7,6 +7,7 @@ import { OrderRepository } from "../repositories/order.repository";
 import { PortfolioRepository } from "../repositories/portfolio.repository";
 import { HoldingRepository } from "../repositories/holding.repository";
 import { NotFoundError, Publisher, ROUTING_KEYS, ValidationError } from "@auto-invest/shared";
+import { addCash, addShares, cost as costOf, d, shares, subCash, weightedAvgCost } from "../money";
 
 export class OrderService {
   constructor(
@@ -56,15 +57,15 @@ export class OrderService {
 
     try {
       const portfolio = await this.ensurePortfolio(tx, order.userId);
-      const qty = Number(order.quantity);
-      const cost = qty * fillPrice;
+      const qty = order.quantity;
+      const cost = costOf(qty, fillPrice);
 
       if (order.side === "BUY") {
         await this.upsertHolding(tx, portfolio, order.symbol, qty, fillPrice);
-        portfolio.cashBalance = (Number(portfolio.cashBalance) - cost).toFixed(2);
+        portfolio.cashBalance = subCash(portfolio.cashBalance, cost);
       } else {
-        await this.upsertHolding(tx, portfolio, order.symbol, -qty, fillPrice);
-        portfolio.cashBalance = (Number(portfolio.cashBalance) + cost).toFixed(2);
+        await this.upsertHolding(tx, portfolio, order.symbol, d(qty).negated().toString(), fillPrice);
+        portfolio.cashBalance = addCash(portfolio.cashBalance, cost);
       }
       await this.portfolios.save(portfolio, tx);
 
@@ -85,20 +86,18 @@ export class OrderService {
     return this.portfolios.create({ userId, cashBalance: "100000.00" }, tx); // demo seed
   }
 
-  private async upsertHolding(tx: EntityManager, portfolio: Portfolio, symbol: string, qtyDelta: number, price: number) {
+  private async upsertHolding(tx: EntityManager, portfolio: Portfolio, symbol: string, qtyDelta: string, price: number) {
     let h = await this.holdings.findByPortfolioAndSymbol(portfolio.id, symbol, tx);
     if (!h) {
-      if (qtyDelta < 0) throw new ValidationError(`cannot sell ${symbol}: no position`);
+      if (d(qtyDelta).isNegative()) throw new ValidationError(`cannot sell ${symbol}: no position`);
       h = this.holdings.create({ portfolio, symbol, quantity: String(qtyDelta), avgCost: String(price) }, tx);
     } else {
-      const oldQty = Number(h.quantity);
-      const newQty = oldQty + qtyDelta;
-      if (newQty < 0) throw new ValidationError(`oversell on ${symbol}`);
-      if (qtyDelta > 0) {
-        const newAvg = (oldQty * Number(h.avgCost) + qtyDelta * price) / newQty;
-        h.avgCost = newAvg.toFixed(6);
+      const newQty = addShares(h.quantity, qtyDelta);
+      if (d(newQty).isNegative()) throw new ValidationError(`oversell on ${symbol}`);
+      if (d(qtyDelta).isPositive()) {
+        h.avgCost = weightedAvgCost(h.quantity, h.avgCost, qtyDelta, price);
       }
-      h.quantity = newQty.toFixed(6);
+      h.quantity = shares(newQty);
     }
     await this.holdings.save(h, tx);
   }
