@@ -11,6 +11,7 @@ import { VerificationTokenRepository } from "./repository/verification-token.rep
 import { AuthService } from "./services/auth.service";
 import { EmailService } from "./services/email.service";
 import { buildAuthRouter } from "./routes/auth.routes";
+import { requestContext } from "./middleware/request-context";
 import { handleError } from "./utils/error.handler";
 import { logger } from "./utils/logger";
 
@@ -32,6 +33,7 @@ async function main() {
   app.use(cors());
   app.use(rateLimit({ windowMs: 60 * 1000, max: 100 }));
   app.use(express.json({ limit: "10kb" }));
+  app.use(requestContext);
 
   app.get("/health", (_req, res) => res.json({ ok: true }));
   app.use("/", buildAuthRouter(auth));

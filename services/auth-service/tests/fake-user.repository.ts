@@ -23,11 +23,22 @@ export class FakeUserRepository extends UserRepository {
       id: randomUUID(),
       email: input.email,
       passwordHash: input.passwordHash,
+      emailVerified: false,
+      emailVerifiedAt: null,
       createdAt: new Date(),
     };
     this.byEmail.set(user.email, user);
     this.byId.set(user.id, user);
     return user;
+  }
+
+  async markEmailVerified(id: string): Promise<unknown> {
+    const user = this.byId.get(id);
+    if (user) {
+      user.emailVerified = true;
+      user.emailVerifiedAt = new Date();
+    }
+    return undefined;
   }
 
   size(): number { return this.byEmail.size; }

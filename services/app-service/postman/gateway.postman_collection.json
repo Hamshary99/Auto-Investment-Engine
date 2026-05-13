@@ -1,0 +1,176 @@
+{
+  "info": {
+    "name": "Auto Invest Gateway (app-service)",
+    "description": "End-to-end flow through app-service on port 3000. This is how the real client talks to the system — app-service proxies /auth/* to auth-service and /api/* to portfolio-service after verifying the JWT and injecting an internal-auth token.\n\nFlow: Register → (blocked Login) → grab token from auth-service logs → set `verifyToken` → Verify → Login → Portfolio + NAV + Order.\n\nAll bodies use literal example values. Only `verifyToken` needs to be filled in manually.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl",     "value": "http://localhost:3000" },
+    { "key": "verifyToken", "value": "" },
+    { "key": "jwt",         "value": "" },
+    { "key": "orderId",     "value": "" }
+  ],
+  "item": [
+    {
+      "name": "1. Register",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+        "pm.test('201 created', () => pm.response.to.have.status(201));",
+        "pm.test('unverified, no jwt', () => {",
+        "  const b = pm.response.json();",
+        "  pm.expect(b.emailVerified).to.eql(false);",
+        "  pm.expect(b).to.not.have.property('token');",
+        "});"
+      ]}}],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": { "raw": "{{baseUrl}}/auth/register", "host": ["{{baseUrl}}"], "path": ["auth", "register"] },
+        "body": { "mode": "raw", "raw": "{\n  \"email\": \"alice@example.com\",\n  \"password\": \"Sup3rSecret!\"\n}" }
+      }
+    },
+    {
+      "name": "2. Login (blocked: 403)",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+        "pm.test('403 forbidden', () => pm.response.to.have.status(403));",
+        "pm.test('email_not_verified', () => pm.expect(pm.response.json().type).to.eql('email_not_verified'));"
+      ]}}],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] },
+        "body": { "mode": "raw", "raw": "{\n  \"email\": \"alice@example.com\",\n  \"password\": \"Sup3rSecret!\"\n}" }
+      }
+    },
+    {
+      "name": "3. Verify Email",
+      "event": [
+        { "listen": "prerequest", "script": { "type": "text/javascript", "exec": [
+          "if (!pm.collectionVariables.get('verifyToken')) {",
+          "  throw new Error('Set `verifyToken` — copy the token from auth-service stdout (look for the verification log line).');",
+          "}"
+        ]}},
+        { "listen": "test", "script": { "type": "text/javascript", "exec": [
+          "pm.test('200 ok', () => pm.response.to.have.status(200));",
+          "const body = pm.response.json();",
+          "pm.test('emailVerified + jwt', () => {",
+          "  pm.expect(body.emailVerified).to.eql(true);",
+          "  pm.expect(body.token).to.be.a('string');",
+          "});",
+          "pm.collectionVariables.set('jwt', body.token);"
+        ]}}
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": { "raw": "{{baseUrl}}/auth/verify", "host": ["{{baseUrl}}"], "path": ["auth", "verify"] },
+        "body": { "mode": "raw", "raw": "{\n  \"token\": \"{{verifyToken}}\"\n}" }
+      }
+    },
+    {
+      "name": "4. Login (ok: 200)",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+        "pm.test('200 ok', () => pm.response.to.have.status(200));",
+        "const body = pm.response.json();",
+        "pm.collectionVariables.set('jwt', body.token);"
+      ]}}],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] },
+        "body": { "mode": "raw", "raw": "{\n  \"email\": \"alice@example.com\",\n  \"password\": \"Sup3rSecret!\"\n}" }
+      }
+    },
+    {
+      "name": "5. Me (protected)",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+        "pm.test('200 ok', () => pm.response.to.have.status(200));"
+      ]}}],
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{jwt}}" }],
+        "url": { "raw": "{{baseUrl}}/auth/me", "host": ["{{baseUrl}}"], "path": ["auth", "me"] }
+      }
+    },
+    {
+      "name": "6. Get Portfolio",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+        "pm.test('200 ok', () => pm.response.to.have.status(200));"
+      ]}}],
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{jwt}}" }],
+        "url": { "raw": "{{baseUrl}}/api/portfolio", "host": ["{{baseUrl}}"], "path": ["api", "portfolio"] }
+      }
+    },
+    {
+      "name": "7. Get NAV",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+        "pm.test('200 ok', () => pm.response.to.have.status(200));"
+      ]}}],
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{jwt}}" }],
+        "url": { "raw": "{{baseUrl}}/api/nav", "host": ["{{baseUrl}}"], "path": ["api", "nav"] }
+      }
+    },
+    {
+      "name": "8. Place Order (BUY)",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+        "pm.test('2xx', () => pm.expect(pm.response.code).to.be.oneOf([200, 201, 202]));",
+        "const body = pm.response.json();",
+        "if (body && body.id) pm.collectionVariables.set('orderId', body.id);"
+      ]}}],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{jwt}}" },
+          { "key": "Content-Type",  "value": "application/json" }
+        ],
+        "url": { "raw": "{{baseUrl}}/api/orders", "host": ["{{baseUrl}}"], "path": ["api", "orders"] },
+        "body": { "mode": "raw", "raw": "{\n  \"symbol\": \"AAPL\",\n  \"side\": \"BUY\",\n  \"quantity\": 10\n}" }
+      }
+    },
+    {
+      "name": "9. Get Order by id",
+      "event": [
+        { "listen": "prerequest", "script": { "type": "text/javascript", "exec": [
+          "if (!pm.collectionVariables.get('orderId')) throw new Error('Run step 8 first.');"
+        ]}},
+        { "listen": "test", "script": { "type": "text/javascript", "exec": [
+          "pm.test('200 ok', () => pm.response.to.have.status(200));"
+        ]}}
+      ],
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{jwt}}" }],
+        "url": { "raw": "{{baseUrl}}/api/orders/{{orderId}}", "host": ["{{baseUrl}}"], "path": ["api", "orders", "{{orderId}}"] }
+      }
+    },
+    {
+      "name": "Negative: /api without jwt (401)",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+        "pm.test('401 unauthorized', () => pm.response.to.have.status(401));"
+      ]}}],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": { "raw": "{{baseUrl}}/api/portfolio", "host": ["{{baseUrl}}"], "path": ["api", "portfolio"] }
+      }
+    },
+    {
+      "name": "Negative: SELL with bad symbol length (400)",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+        "pm.test('400 validation_error', () => pm.response.to.have.status(400));"
+      ]}}],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{jwt}}" },
+          { "key": "Content-Type",  "value": "application/json" }
+        ],
+        "url": { "raw": "{{baseUrl}}/api/orders", "host": ["{{baseUrl}}"], "path": ["api", "orders"] },
+        "body": { "mode": "raw", "raw": "{\n  \"symbol\": \"\",\n  \"side\": \"SELL\",\n  \"quantity\": 1\n}" }
+      }
+    }
+  ]
+}

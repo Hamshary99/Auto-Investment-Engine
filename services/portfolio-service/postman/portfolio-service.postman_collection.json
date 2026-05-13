@@ -1,0 +1,127 @@
+{
+  "info": {
+    "name": "Portfolio Service",
+    "description": "Direct calls to portfolio-service on port 3002.\n\nAll endpoints require a Bearer JWT issued by auth-service. Run the auth-service collection through step 4 first, copy the JWT into the `jwt` collection variable here, then run requests 1–4.\n\nAll request bodies use literal example values — just hit Send.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl",  "value": "http://localhost:3002" },
+    { "key": "jwt",      "value": "" },
+    { "key": "orderId",  "value": "" }
+  ],
+  "item": [
+    {
+      "name": "1. Get Portfolio",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+        "pm.test('200 ok', () => pm.response.to.have.status(200));"
+      ]}}],
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{jwt}}" }],
+        "url": { "raw": "{{baseUrl}}/portfolio", "host": ["{{baseUrl}}"], "path": ["portfolio"] },
+        "description": "Returns the authenticated user's holdings."
+      }
+    },
+    {
+      "name": "2. Get NAV",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+        "pm.test('200 ok', () => pm.response.to.have.status(200));"
+      ]}}],
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{jwt}}" }],
+        "url": { "raw": "{{baseUrl}}/nav", "host": ["{{baseUrl}}"], "path": ["nav"] },
+        "description": "Returns the latest net asset value snapshot for the user."
+      }
+    },
+    {
+      "name": "3. Place Order (BUY)",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+        "pm.test('2xx', () => pm.expect(pm.response.code).to.be.oneOf([200, 201, 202]));",
+        "const body = pm.response.json();",
+        "if (body && body.id) pm.collectionVariables.set('orderId', body.id);"
+      ]}}],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{jwt}}" },
+          { "key": "Content-Type",  "value": "application/json" }
+        ],
+        "url": { "raw": "{{baseUrl}}/orders", "host": ["{{baseUrl}}"], "path": ["orders"] },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"symbol\": \"AAPL\",\n  \"side\": \"BUY\",\n  \"quantity\": 10\n}"
+        },
+        "description": "Places a BUY order. The order id is stored in the `orderId` variable for step 4."
+      }
+    },
+    {
+      "name": "4. Get Order by id",
+      "event": [
+        { "listen": "prerequest", "script": { "type": "text/javascript", "exec": [
+          "if (!pm.collectionVariables.get('orderId')) {",
+          "  throw new Error('Run step 3 first, or set `orderId` manually.');",
+          "}"
+        ]}},
+        { "listen": "test", "script": { "type": "text/javascript", "exec": [
+          "pm.test('200 ok', () => pm.response.to.have.status(200));"
+        ]}}
+      ],
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{jwt}}" }],
+        "url": { "raw": "{{baseUrl}}/orders/{{orderId}}", "host": ["{{baseUrl}}"], "path": ["orders", "{{orderId}}"] },
+        "description": "Fetches a single order by id."
+      }
+    },
+    {
+      "name": "Negative: Place order missing jwt (401)",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+        "pm.test('401 unauthorized', () => pm.response.to.have.status(401));"
+      ]}}],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": { "raw": "{{baseUrl}}/orders", "host": ["{{baseUrl}}"], "path": ["orders"] },
+        "body": { "mode": "raw", "raw": "{\n  \"symbol\": \"AAPL\",\n  \"side\": \"BUY\",\n  \"quantity\": 10\n}" }
+      }
+    },
+    {
+      "name": "Negative: Place order bad side (400)",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+        "pm.test('400 validation_error', () => pm.response.to.have.status(400));"
+      ]}}],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{jwt}}" },
+          { "key": "Content-Type",  "value": "application/json" }
+        ],
+        "url": { "raw": "{{baseUrl}}/orders", "host": ["{{baseUrl}}"], "path": ["orders"] },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"symbol\": \"AAPL\",\n  \"side\": \"HOLD\",\n  \"quantity\": 10\n}"
+        },
+        "description": "side must be BUY or SELL — DTO rejects HOLD."
+      }
+    },
+    {
+      "name": "Negative: Place order negative quantity (400)",
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+        "pm.test('400 validation_error', () => pm.response.to.have.status(400));"
+      ]}}],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{jwt}}" },
+          { "key": "Content-Type",  "value": "application/json" }
+        ],
+        "url": { "raw": "{{baseUrl}}/orders", "host": ["{{baseUrl}}"], "path": ["orders"] },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"symbol\": \"AAPL\",\n  \"side\": \"BUY\",\n  \"quantity\": -5\n}"
+        }
+      }
+    }
+  ]
+}

@@ -20,10 +20,17 @@ export class ApiError extends Error {
 
 /**
  * Express error middleware. Converts any error thrown anywhere in the
- * request pipeline into a consistent JSON shape.
+ * request pipeline into a consistent JSON shape and logs it with the
+ * per-request logger so the stack trace is preserved.
  */
-export const handleError = (err: Error, _req: Request, res: Response, _next: NextFunction) => {
+export const handleError = (err: Error, req: Request, res: Response, _next: NextFunction) => {
+  const log = req.log ?? logger;
+
   if (err instanceof ApiError) {
+    log.warn(
+      { err, statusCode: err.statusCode, type: err.type, details: err.details },
+      "api error",
+    );
     return res.status(err.statusCode).json({
       status: "error",
       type: err.type,
@@ -32,7 +39,8 @@ export const handleError = (err: Error, _req: Request, res: Response, _next: Nex
       details: err.details,
     });
   }
-  logger.error({ err }, "unhandled error");
+
+  log.error({ err }, "unhandled error");
   res.status(500).json({
     status: "error",
     type: "internal_error",

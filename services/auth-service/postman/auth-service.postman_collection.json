@@ -1,0 +1,337 @@
+{
+  "info": {
+    "name": "Auth Service",
+    "description": "Email-verification flow for the Auto Invest auth-service.\n\nUsage:\n1. Boot the service: `cd services/auth-service && npm run dev`\n2. Run requests in order: 1 → 2 → 3 (optional) → grab token → set `verifyToken` → 4 → 5 → 6.\n3. Token source: with no `RESEND_API_KEY`, the service logs the link to stdout — copy the `token=` query param. With Resend configured, copy from the email.\n\nAll request bodies use literal example values — just hit Send. Only `verifyToken` needs to be filled in (collection variable).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl",     "value": "http://localhost:3001" },
+    { "key": "verifyToken", "value": "" },
+    { "key": "jwt",         "value": "" }
+  ],
+  "item": [
+    {
+      "name": "1. Register",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('201 created', () => pm.response.to.have.status(201));",
+              "const body = pm.response.json();",
+              "pm.test('returns unverified user, no jwt', () => {",
+              "  pm.expect(body).to.have.property('id');",
+              "  pm.expect(body.emailVerified).to.eql(false);",
+              "  pm.expect(body).to.not.have.property('token');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": { "raw": "{{baseUrl}}/register", "host": ["{{baseUrl}}"], "path": ["register"] },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"alice@example.com\",\n  \"password\": \"Sup3rSecret!\"\n}"
+        },
+        "description": "Register a fresh user. Returns 201 with `{ id, email, emailVerified: false, message }` — no JWT.\n\nIf you re-run this, you'll hit the 409 duplicate test below; pick a different email or restart the DB."
+      }
+    },
+    {
+      "name": "2. Login (blocked: 403)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('403 forbidden until verified', () => pm.response.to.have.status(403));",
+              "pm.test('error type is email_not_verified', () => {",
+              "  pm.expect(pm.response.json().type).to.eql('email_not_verified');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": { "raw": "{{baseUrl}}/login", "host": ["{{baseUrl}}"], "path": ["login"] },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"alice@example.com\",\n  \"password\": \"Sup3rSecret!\"\n}"
+        },
+        "description": "Should return 403 with type=email_not_verified — the user exists and the password is right, but the email is unverified."
+      }
+    },
+    {
+      "name": "3. Resend Verification (optional)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200 ok', () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": { "raw": "{{baseUrl}}/resend-verification", "host": ["{{baseUrl}}"], "path": ["resend-verification"] },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"alice@example.com\"\n}"
+        },
+        "description": "Resends the verification email. Invalidates any prior token — so if you call this, copy the NEW token from logs, not an older one.\n\nAlways returns 200 with a generic message (does not leak whether the email exists)."
+      }
+    },
+    {
+      "name": "4. Verify Email",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (!pm.collectionVariables.get('verifyToken')) {",
+              "  throw new Error('Set the `verifyToken` collection variable first — copy the token from the verification email or server logs.');",
+              "}"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200 ok', () => pm.response.to.have.status(200));",
+              "const body = pm.response.json();",
+              "pm.test('emailVerified and returns jwt', () => {",
+              "  pm.expect(body.emailVerified).to.eql(true);",
+              "  pm.expect(body.token).to.be.a('string');",
+              "});",
+              "pm.collectionVariables.set('jwt', body.token);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": { "raw": "{{baseUrl}}/verify", "host": ["{{baseUrl}}"], "path": ["verify"] },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"token\": \"{{verifyToken}}\"\n}"
+        },
+        "description": "Set the `verifyToken` collection variable to the hex token from the email link before sending. Returns 200 with `{ emailVerified: true, token: <jwt> }`. The JWT is auto-stored to the `jwt` variable for step 6."
+      }
+    },
+    {
+      "name": "5. Login (ok: 200)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200 ok', () => pm.response.to.have.status(200));",
+              "const body = pm.response.json();",
+              "pm.test('returns jwt', () => pm.expect(body.token).to.be.a('string'));",
+              "pm.collectionVariables.set('jwt', body.token);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": { "raw": "{{baseUrl}}/login", "host": ["{{baseUrl}}"], "path": ["login"] },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"alice@example.com\",\n  \"password\": \"Sup3rSecret!\"\n}"
+        },
+        "description": "Now that the email is verified, the same credentials return a JWT. Token is stored to the `jwt` variable for step 6."
+      }
+    },
+    {
+      "name": "6. Me (protected)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200 ok', () => pm.response.to.have.status(200));",
+              "pm.test('returns user id + email', () => {",
+              "  const b = pm.response.json();",
+              "  pm.expect(b.id).to.be.a('string');",
+              "  pm.expect(b.email).to.be.a('string');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{jwt}}" }],
+        "url": { "raw": "{{baseUrl}}/me", "host": ["{{baseUrl}}"], "path": ["me"] },
+        "description": "Bearer token-protected endpoint. Verifies the JWT issued in step 4 or 5 still works."
+      }
+    },
+    {
+      "name": "Negative: Verify with bogus token (400)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('400 invalid_token', () => pm.response.to.have.status(400));",
+              "pm.test('error type', () => pm.expect(pm.response.json().type).to.eql('invalid_token'));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": { "raw": "{{baseUrl}}/verify", "host": ["{{baseUrl}}"], "path": ["verify"] },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"token\": \"00000000000000000000000000000000aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"\n}"
+        },
+        "description": "Token is the right shape (64 hex chars) but doesn't match anything in the DB. Expect 400 invalid_token."
+      }
+    },
+    {
+      "name": "Negative: Verify with malformed token (400 validation)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('400 validation_error', () => pm.response.to.have.status(400));",
+              "pm.test('error type', () => pm.expect(pm.response.json().type).to.eql('validation_error'));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": { "raw": "{{baseUrl}}/verify", "host": ["{{baseUrl}}"], "path": ["verify"] },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"token\": \"too-short\"\n}"
+        },
+        "description": "DTO validator rejects tokens shorter than 32 chars before the service is even called."
+      }
+    },
+    {
+      "name": "Negative: Register duplicate email (409)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('409 conflict', () => pm.response.to.have.status(409));",
+              "pm.test('error type', () => pm.expect(pm.response.json().type).to.eql('conflict'));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": { "raw": "{{baseUrl}}/register", "host": ["{{baseUrl}}"], "path": ["register"] },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"alice@example.com\",\n  \"password\": \"Sup3rSecret!\"\n}"
+        },
+        "description": "Re-uses the email from step 1. Expect 409 conflict."
+      }
+    },
+    {
+      "name": "Negative: Login wrong password (401)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('401 unauthorized', () => pm.response.to.have.status(401));",
+              "pm.test('generic message (no enumeration)', () => {",
+              "  pm.expect(pm.response.json().message).to.eql('invalid credentials');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": { "raw": "{{baseUrl}}/login", "host": ["{{baseUrl}}"], "path": ["login"] },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"alice@example.com\",\n  \"password\": \"WrongPassword!\"\n}"
+        },
+        "description": "Same message as 'unknown email' below — the service deliberately avoids leaking which one is wrong."
+      }
+    },
+    {
+      "name": "Negative: Login unknown email (401)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('401 unauthorized', () => pm.response.to.have.status(401));",
+              "pm.test('generic message (no enumeration)', () => {",
+              "  pm.expect(pm.response.json().message).to.eql('invalid credentials');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": { "raw": "{{baseUrl}}/login", "host": ["{{baseUrl}}"], "path": ["login"] },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"nobody@example.com\",\n  \"password\": \"Sup3rSecret!\"\n}"
+        },
+        "description": "Same status + message as 'wrong password' above — no user enumeration."
+      }
+    },
+    {
+      "name": "Negative: Me without token (401)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('401 unauthorized', () => pm.response.to.have.status(401));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": { "raw": "{{baseUrl}}/me", "host": ["{{baseUrl}}"], "path": ["me"] },
+        "description": "No Authorization header — should be 401 missing bearer token."
+      }
+    }
+  ]
+}
