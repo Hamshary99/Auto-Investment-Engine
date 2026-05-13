@@ -12,6 +12,12 @@ export class User {
   @Column({ type: "varchar", length: 255 })
   passwordHash!: string;
 
+  @Column({ type: "boolean", default: false })
+  emailVerified!: boolean;
+
+  @Column({ type: "timestamptz", nullable: true })
+  emailVerifiedAt!: Date | null;
+
   @CreateDateColumn()
   createdAt!: Date;
 }

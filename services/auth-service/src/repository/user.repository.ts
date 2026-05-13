@@ -19,4 +19,8 @@ export class UserRepository {
     const r = this.repo(tx);
     return r.save(r.create(input));
   }
+
+  markEmailVerified(id: string, tx?: EntityManager): Promise<unknown> {
+    return this.repo(tx).update({ id }, { emailVerified: true, emailVerifiedAt: new Date() });
+  }
 }

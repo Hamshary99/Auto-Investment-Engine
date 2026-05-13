@@ -2,6 +2,7 @@ import "reflect-metadata";
 import { DataSource } from "typeorm";
 import { config } from "./config";
 import { User } from "./models/user.model";
+import { VerificationToken } from "./models/verification-token.model";
 
 export const AppDataSource = new DataSource({
   type: "postgres",
@@ -11,7 +12,7 @@ export const AppDataSource = new DataSource({
   password: config.db.password,
   database: config.db.database,
   schema: "auth",
-  entities: [User],
+  entities: [User, VerificationToken],
   synchronize: true, // demo only
   logging: false,
 });

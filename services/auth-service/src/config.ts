@@ -10,4 +10,10 @@ export const config = {
     password: process.env.POSTGRES_PASSWORD || "investpass",
     database: process.env.POSTGRES_DB || "auto_invest",
   },
+  email: {
+    resendApiKey: process.env.RESEND_API_KEY || "",
+    from: process.env.EMAIL_FROM || "Auto Invest <onboarding@resend.dev>",
+    appUrl: process.env.APP_URL || "http://localhost:3000",
+    verificationTtlHours: parseInt(process.env.EMAIL_VERIFICATION_TTL_HOURS || "24", 10),
+  },
 };

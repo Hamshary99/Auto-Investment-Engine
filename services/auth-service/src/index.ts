@@ -7,7 +7,9 @@ import rateLimit from "express-rate-limit";
 import { AppDataSource } from "./data-source";
 import { config } from "./config";
 import { UserRepository } from "./repository/user.repository";
+import { VerificationTokenRepository } from "./repository/verification-token.repository";
 import { AuthService } from "./services/auth.service";
+import { EmailService } from "./services/email.service";
 import { buildAuthRouter } from "./routes/auth.routes";
 import { handleError } from "./utils/error.handler";
 import { logger } from "./utils/logger";
@@ -20,7 +22,9 @@ async function main() {
 
   // composition root
   const users = new UserRepository();
-  const auth = new AuthService(users);
+  const verificationTokens = new VerificationTokenRepository();
+  const email = new EmailService();
+  const auth = new AuthService(users, verificationTokens, email);
 
   // app
   const app = express();

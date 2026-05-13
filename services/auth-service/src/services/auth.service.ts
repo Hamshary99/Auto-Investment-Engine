@@ -1,12 +1,19 @@
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
 import { User } from "../models/user.model";
 import { UserRepository } from "../repository/user.repository";
+import { VerificationTokenRepository } from "../repository/verification-token.repository";
+import { EmailService } from "./email.service";
 import { config } from "../config";
 import { ApiError } from "../utils/error.handler";
 
 export class AuthService {
-  constructor(private readonly users: UserRepository) {}
+  constructor(
+    private readonly users: UserRepository,
+    private readonly verificationTokens: VerificationTokenRepository,
+    private readonly email: EmailService,
+  ) {}
 
   async register(email: string, password: string) {
     if (await this.users.findByEmail(email)) {
@@ -14,7 +21,13 @@ export class AuthService {
     }
     const passwordHash = await bcrypt.hash(password, config.bcryptRounds);
     const user = await this.users.create({ email, passwordHash });
-    return { id: user.id, email: user.email, token: this.sign(user) };
+    await this.issueVerificationEmail(user);
+    return {
+      id: user.id,
+      email: user.email,
+      emailVerified: false,
+      message: "verification email sent",
+    };
   }
 
   async login(email: string, password: string) {
@@ -22,7 +35,46 @@ export class AuthService {
     if (!user) throw new ApiError("invalid credentials", 401, "unauthorized");
     const ok = await bcrypt.compare(password, user.passwordHash);
     if (!ok) throw new ApiError("invalid credentials", 401, "unauthorized");
+    if (!user.emailVerified) {
+      throw new ApiError("email not verified", 403, "email_not_verified");
+    }
     return { id: user.id, email: user.email, token: this.sign(user) };
+  }
+
+  async verifyEmail(rawToken: string) {
+    const tokenHash = this.hashToken(rawToken);
+    const record = await this.verificationTokens.findByHash(tokenHash);
+    if (!record || record.usedAt || record.expiresAt < new Date()) {
+      throw new ApiError("invalid or expired token", 400, "invalid_token");
+    }
+    const user = await this.users.findById(record.userId);
+    if (!user) throw new ApiError("invalid or expired token", 400, "invalid_token");
+
+    await this.users.markEmailVerified(user.id);
+    await this.verificationTokens.markUsed(record.id);
+    const refreshed = { ...user, emailVerified: true } as User;
+    return { id: user.id, email: user.email, emailVerified: true, token: this.sign(refreshed) };
+  }
+
+  async resendVerification(email: string) {
+    const user = await this.users.findByEmail(email);
+    // do not leak whether the address exists
+    if (!user || user.emailVerified) return { message: "if the account exists, a new email was sent" };
+    await this.issueVerificationEmail(user);
+    return { message: "if the account exists, a new email was sent" };
+  }
+
+  private async issueVerificationEmail(user: User) {
+    await this.verificationTokens.invalidateAllForUser(user.id);
+    const rawToken = crypto.randomBytes(32).toString("hex");
+    const tokenHash = this.hashToken(rawToken);
+    const expiresAt = new Date(Date.now() + config.email.verificationTtlHours * 3600 * 1000);
+    await this.verificationTokens.create({ userId: user.id, tokenHash, expiresAt });
+    await this.email.sendVerification(user.email, rawToken);
+  }
+
+  private hashToken(raw: string): string {
+    return crypto.createHash("sha256").update(raw).digest("hex");
   }
 
   private sign(user: User): string {

@@ -19,6 +19,22 @@ export const buildAuthController = (auth: AuthService) => ({
     } catch (e) { next(e); }
   },
 
+  postVerifyEmail: async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { token } = req.body;
+      const result = await auth.verifyEmail(token);
+      res.json(result);
+    } catch (e) { next(e); }
+  },
+
+  postResendVerification: async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { email } = req.body;
+      const result = await auth.resendVerification(email);
+      res.json(result);
+    } catch (e) { next(e); }
+  },
+
   getMe: (req: AuthedRequest, res: Response) => {
     res.json({ id: req.userId, email: req.email });
   },
