@@ -1,3 +1,8 @@
+import path from "path";
+import dotenv from "dotenv";
+dotenv.config({ path: path.resolve(__dirname, "../../../.env"), override: true });
+dotenv.config({ path: path.resolve(__dirname, "../../../.env.local"), override: true });
+
 import cron from "node-cron";
 import { connectRabbit, Publisher } from "@auto-invest/shared";
 import { config } from "./config";

@@ -16,6 +16,7 @@
     "class-validator": "^0.14.1",
     "cors": "^2.8.5",
     "decimal.js": "^10.6.0",
+    "dotenv": "^17.4.2",
     "express": "^4.21.1",
     "express-rate-limit": "^7.4.1",
     "helmet": "^8.0.0",

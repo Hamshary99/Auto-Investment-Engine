@@ -24,8 +24,8 @@ export class VerificationTokenRepository {
     return this.repo(tx)
       .createQueryBuilder()
       .update()
-      .set({ usedAt: () => "COALESCE(used_at, NOW())" })
-      .where("user_id = :userId AND used_at IS NULL", { userId })
+      .set({ usedAt: () => `COALESCE("usedAt", NOW())` })
+      .where(`"userId" = :userId AND "usedAt" IS NULL`, { userId })
       .execute();
   }
 }

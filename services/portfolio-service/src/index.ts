@@ -1,3 +1,8 @@
+import path from "path";
+import dotenv from "dotenv";
+dotenv.config({ path: path.resolve(__dirname, "../../../.env"), override: true });
+dotenv.config({ path: path.resolve(__dirname, "../../../.env.local"), override: true });
+
 import "reflect-metadata";
 import express from "express";
 import helmet from "helmet";

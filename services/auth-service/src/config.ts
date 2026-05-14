@@ -1,4 +1,8 @@
+const nodeEnv = process.env.NODE_ENV || "development";
+
 export const config = {
+  nodeEnv,
+  isDev: nodeEnv === "development" || nodeEnv === "dev",
   port: parseInt(process.env.AUTH_PORT || "3001", 10),
   jwtSecret: process.env.JWT_SECRET || "dev-secret",
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || "1h",

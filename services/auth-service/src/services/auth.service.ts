@@ -23,6 +23,18 @@ export class AuthService {
     }
     const passwordHash = await bcrypt.hash(password, config.bcryptRounds);
     const user = await this.users.create({ email, passwordHash });
+    if (config.isDev) {
+      await this.users.markEmailVerified(user.id);
+      logger.info({ userId: user.id, email }, "user registered (dev: email auto-verified)");
+      const verified = { ...user, emailVerified: true } as User;
+      return {
+        id: user.id,
+        email: user.email,
+        emailVerified: true,
+        token: this.sign(verified),
+        message: "email auto-verified (development mode)",
+      };
+    }
     await this.issueVerificationEmail(user);
     logger.info({ userId: user.id, email }, "user registered");
     return {

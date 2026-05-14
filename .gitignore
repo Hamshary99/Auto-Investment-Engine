@@ -1,9 +1,16 @@
 node_modules/
 dist/
+shared/src/**/*.js
+shared/src/**/*.js.map
+shared/src/**/*.d.ts
+services/app-service/package-lock.json
 .env
+.env.local
+.env.*.local
 *.log
 .DS_Store
 coverage/
 services/portfolio-service/PORTFOLIO_SERVICE.md
 services/portfolio-service/portfolio-service.postman_collection.json
 .claude/
+scripts/db-init/*.sql

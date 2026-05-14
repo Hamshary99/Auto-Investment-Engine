@@ -12,6 +12,7 @@
   "dependencies": {
     "@auto-invest/shared": "file:../../shared",
     "amqplib": "^0.10.4",
+    "dotenv": "^17.4.2",
     "node-cron": "^3.0.3",
     "uuid": "^10.0.0"
   },
