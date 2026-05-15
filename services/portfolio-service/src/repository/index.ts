@@ -4,7 +4,8 @@ import { NavSnapshotRepository } from "./nav-snapshot.repository";
 import { OrderRepository } from "./order.repository";
 import { ProcessedMessageRepository } from "./processed-message.repository";
 import { FundRepository } from "./fund.repository";
-import { FundHoldingRepository } from "./fund.holding.repository";
+import { FundAllocationRepository } from "./fund-allocation.repository";
+import { FundInvestmentRepository } from "./fund-investment.repository";
 
 export {
     HoldingRepository,
@@ -13,5 +14,6 @@ export {
     OrderRepository,
     ProcessedMessageRepository,
     FundRepository,
-    FundHoldingRepository
+    FundAllocationRepository,
+    FundInvestmentRepository,
 };

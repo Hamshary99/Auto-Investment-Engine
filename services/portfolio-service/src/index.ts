@@ -19,7 +19,8 @@ import {
   NavSnapshotRepository,
   ProcessedMessageRepository, 
   FundRepository,
-  FundHoldingRepository,
+  FundAllocationRepository,
+  FundInvestmentRepository,
 } from "./repository/index";
 
 import {
@@ -58,12 +59,19 @@ async function main() {
   const navRepo = new NavSnapshotRepository();
   const inbox = new ProcessedMessageRepository();
   const fundRepo = new FundRepository();
-  const fundHoldingRepo = new FundHoldingRepository();
+  const fundAllocationRepo = new FundAllocationRepository();
+  const fundInvestmentRepo = new FundInvestmentRepository();
 
   const orderService = new OrderService(orderRepo, portfolioRepo, holdingRepo, publisher);
   const navService = new NavService(portfolioRepo, navRepo);
   const reconService = new ReconciliationService(orderRepo);
-  const fundService = new FundService(fundRepo, fundHoldingRepo, orderService);
+  const fundService = new FundService(
+    fundRepo,
+    fundAllocationRepo,
+    fundInvestmentRepo,
+    portfolioRepo,
+    orderService,
+  );
 
   // consumers
   await startOrderExecutionConsumer(rabbit, orderService, inbox);

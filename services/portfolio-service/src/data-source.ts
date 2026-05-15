@@ -8,7 +8,8 @@ import {
   NavSnapshot,
   ProcessedMessage,
   Fund,
-  FundHolding,
+  FundAllocation,
+  FundInvestment,
 } from "./models/index";
 
 export const AppDataSource = new DataSource({
@@ -19,7 +20,7 @@ export const AppDataSource = new DataSource({
   password: config.db.password,
   database: config.db.database,
   schema: "portfolio",
-  entities: [Portfolio, Holding, Order, NavSnapshot, ProcessedMessage, Fund, FundHolding],
+  entities: [Portfolio, Holding, Order, NavSnapshot, ProcessedMessage, Fund, FundAllocation, FundInvestment],
   synchronize: true,
   logging: false,
 });

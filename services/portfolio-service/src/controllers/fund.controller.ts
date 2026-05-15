@@ -25,4 +25,13 @@ export const buildFundController = (fundService: FundService) => ({
       res.status(202).json(orders);
     } catch (e) { next(e); }
   },
+
+  withdrawFromFund: async (req: AuthedRequest, res: Response, next: NextFunction) => {
+    try {
+      const fundId = String(req.params.id);
+      const amount = Number(req.body.amount);
+      const orders = await fundService.withdraw(req.userId!, fundId, amount);
+      res.status(202).json(orders);
+    } catch (e) { next(e); }
+  },
 });

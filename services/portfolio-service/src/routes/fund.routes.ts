@@ -11,7 +11,8 @@ export const buildFundRouter = (fundService: FundService) => {
 
     router.get("/funds", requireAuth, fc.listFunds);
     router.get("/funds/:id", requireAuth, fc.getFund);
-    router.post("/funds/:id/invest", requireAuth, validate(InvestFundDto), fc.investInFund);
+    router.post("/funds/:id/invest",   requireAuth, validate(InvestFundDto), fc.investInFund);
+    router.post("/funds/:id/withdraw", requireAuth, validate(InvestFundDto), fc.withdrawFromFund);
 
     return router;
 }
