@@ -1,5 +1,5 @@
 import { Column, Entity, ManyToOne, PrimaryGeneratedColumn, Unique, UpdateDateColumn } from "typeorm";
-import { Portfolio } from "./portfolio.model";
+import { Portfolio } from "./index";
 
 @Entity({ name: "holdings", schema: "portfolio" })
 @Unique(["portfolio", "symbol"])

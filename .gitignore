@@ -13,4 +13,6 @@ coverage/
 services/portfolio-service/PORTFOLIO_SERVICE.md
 services/portfolio-service/portfolio-service.postman_collection.json
 .claude/
-scripts/db-init/*.sql
+.comate/
+FUNDS_ADMIN_PLAN.md
+admin-seed/

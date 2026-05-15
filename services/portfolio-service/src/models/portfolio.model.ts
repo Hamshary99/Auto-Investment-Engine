@@ -1,5 +1,5 @@
 import { Column, CreateDateColumn, Entity, Index, OneToMany, PrimaryGeneratedColumn } from "typeorm";
-import { Holding } from "./holding.model";
+import { Holding } from "./index";
 
 @Entity({ name: "portfolios", schema: "portfolio" })
 export class Portfolio {
@@ -18,4 +18,5 @@ export class Portfolio {
 
   @CreateDateColumn()
   createdAt!: Date;
+  
 }

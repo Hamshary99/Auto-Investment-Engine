@@ -12,18 +12,26 @@ import rateLimit from "express-rate-limit";
 import { AppDataSource } from "./data-source";
 import { config } from "./config";
 
-import { OrderRepository } from "./repository/order.repository";
-import { PortfolioRepository } from "./repository/portfolio.repository";
-import { HoldingRepository } from "./repository/holding.repository";
-import { NavSnapshotRepository } from "./repository/nav-snapshot.repository";
-import { ProcessedMessageRepository } from "./repository/processed-message.repository";
+import {
+  PortfolioRepository,
+  HoldingRepository,
+  OrderRepository,
+  NavSnapshotRepository,
+  ProcessedMessageRepository, 
+  FundRepository,
+  FundHoldingRepository,
+} from "./repository/index";
 
-import { OrderService } from "./services/order.service";
-import { NavService } from "./services/nav.service";
-import { ReconciliationService } from "./services/reconciliation.service";
+import {
+  FundService,
+  NavService,
+  OrderService,
+  ReconciliationService,
+} from "./services/index";
 
 import { buildPortfolioRouter } from "./routes/portfolio.routes";
 import { buildOrdersRouter } from "./routes/orders.routes";
+import { buildFundRouter } from "./routes/fund.routes";
 
 import { startOrderExecutionConsumer } from "./consumers/order-execution.consumer";
 import { startNavSnapshotConsumer } from "./consumers/nav-snapshot.consumer";
@@ -49,10 +57,13 @@ async function main() {
   const holdingRepo = new HoldingRepository();
   const navRepo = new NavSnapshotRepository();
   const inbox = new ProcessedMessageRepository();
+  const fundRepo = new FundRepository();
+  const fundHoldingRepo = new FundHoldingRepository();
 
   const orderService = new OrderService(orderRepo, portfolioRepo, holdingRepo, publisher);
   const navService = new NavService(portfolioRepo, navRepo);
   const reconService = new ReconciliationService(orderRepo);
+  const fundService = new FundService(fundRepo, fundHoldingRepo, orderService);
 
   // consumers
   await startOrderExecutionConsumer(rabbit, orderService, inbox);
@@ -69,7 +80,7 @@ async function main() {
   app.get("/health", (_req, res) => res.json({ ok: true }));
   app.use("/", buildPortfolioRouter(portfolioRepo, navService));
   app.use("/", buildOrdersRouter(orderService));
-
+  app.use("/", buildFundRouter(fundService));
   app.use(handleError);
 
   app.listen(config.port, () => logger.info({ port: config.port }, "portfolio-service listening"));

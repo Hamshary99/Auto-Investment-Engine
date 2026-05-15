@@ -1,11 +1,15 @@
 import "reflect-metadata";
 import { DataSource } from "typeorm";
 import { config } from "./config";
-import { Portfolio } from "./models/portfolio.model";
-import { Holding } from "./models/holding.model";
-import { Order } from "./models/order.model";
-import { NavSnapshot } from "./models/nav-snapshot.model";
-import { ProcessedMessage } from "./models/processed-message.model";
+import {
+  Portfolio,
+  Holding,
+  Order,
+  NavSnapshot,
+  ProcessedMessage,
+  Fund,
+  FundHolding,
+} from "./models/index";
 
 export const AppDataSource = new DataSource({
   type: "postgres",
@@ -15,7 +19,7 @@ export const AppDataSource = new DataSource({
   password: config.db.password,
   database: config.db.database,
   schema: "portfolio",
-  entities: [Portfolio, Holding, Order, NavSnapshot, ProcessedMessage],
+  entities: [Portfolio, Holding, Order, NavSnapshot, ProcessedMessage, Fund, FundHolding],
   synchronize: true,
   logging: false,
 });

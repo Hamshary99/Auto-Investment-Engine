@@ -1,6 +1,5 @@
-import { Holding } from "../models/holding.model";
-import { PortfolioRepository } from "../repository/portfolio.repository";
-import { NavSnapshotRepository } from "../repository/nav-snapshot.repository";
+import { Holding } from "../models/index";
+import { PortfolioRepository, NavSnapshotRepository } from "../repository/index";
 import { cash, d } from "../utils/money";
 
 /**

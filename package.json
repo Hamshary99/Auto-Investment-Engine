@@ -6,26 +6,22 @@
   "scripts": {
     "setup": "npm run env:check && npm run install:all",
     "env:check": "node scripts/env-check.js",
-
     "install:all": "npm run install:shared && npm run install:auth && npm run install:portfolio && npm run install:scheduler && npm run install:app",
     "install:shared": "npm --prefix shared install",
     "install:auth": "npm --prefix services/auth-service install",
     "install:portfolio": "npm --prefix services/portfolio-service install",
     "install:scheduler": "npm --prefix services/scheduler-service install",
     "install:app": "npm --prefix services/app-service install",
-
     "build:all": "npm run build:shared && npm run build:auth && npm run build:portfolio && npm run build:scheduler && npm run build:app",
     "build:shared": "npm --prefix shared run build",
     "build:auth": "npm --prefix services/auth-service run build",
     "build:portfolio": "npm --prefix services/portfolio-service run build",
     "build:scheduler": "npm --prefix services/scheduler-service run build",
     "build:app": "npm --prefix services/app-service run build",
-    
     "test": "npm run test:shared && npm run test:auth && npm run test:portfolio",
     "test:shared": "npm --prefix shared test",
     "test:auth": "npm --prefix services/auth-service test",
     "test:portfolio": "npm --prefix services/portfolio-service test",
-    
     "dev:infra": "docker compose up -d postgres rabbitmq",
     "dev:all": "concurrently -n auth,portfolio,scheduler,app -c blue,green,yellow,magenta \"npm:dev:auth\" \"npm:dev:portfolio\" \"npm:dev:scheduler\" \"npm:dev:app\"",
     "dev:auth": "npm --prefix services/auth-service run dev",
@@ -33,7 +29,6 @@
     "dev:scheduler": "npm --prefix services/scheduler-service run dev",
     "dev:app": "npm --prefix services/app-service run dev",
     "dev": "npm run dev:infra && npm run dev:all",
-    
     "up": "docker compose up --build -d",
     "up:fg": "docker compose up --build",
     "down": "docker compose down",
@@ -46,12 +41,14 @@
     "logs:scheduler": "docker compose logs -f --tail=100 scheduler-service",
     "logs:app": "docker compose logs -f --tail=100 app-service",
     "psql": "docker compose exec postgres psql -U invest -d auto_invest",
-    
     "rabbit": "echo Open http://localhost:15672 (user/pass from .env)",
     "health": "curl -s http://localhost:8080/health || echo gateway not reachable",
     "clean": "node scripts/clean.js"
   },
   "devDependencies": {
     "concurrently": "^9.2.1"
+  },
+  "dependencies": {
+    "decimal.js": "^10.6.0"
   }
 }
