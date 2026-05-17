@@ -1,13 +1,13 @@
 import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, Unique } from "typeorm";
 
 @Entity({ name: "nav_snapshots", schema: "portfolio" })
-@Unique(["portfolioId", "forDate"])
+@Unique(["userPortfolioId", "forDate"])
 export class NavSnapshot {
   @PrimaryGeneratedColumn("uuid")
   id!: string;
 
   @Column({ type: "uuid" })
-  portfolioId!: string;
+  userPortfolioId!: string;
 
   @Column({ type: "date" })
   forDate!: string;

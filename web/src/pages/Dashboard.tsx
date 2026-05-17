@@ -14,7 +14,7 @@ export function Dashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([api.get<Portfolio>("/api/portfolio"), api.get<Nav>("/api/nav")])
+    Promise.all([api.get<Portfolio>("/api/user-portfolio"), api.get<Nav>("/api/nav")])
       .then(([p, n]) => {
         setPortfolio(p);
         setNav(n);

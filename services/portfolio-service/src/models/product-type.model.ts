@@ -5,20 +5,18 @@ import {
   OneToMany,
   PrimaryGeneratedColumn,
 } from "typeorm";
-import { FundAllocation } from "./index";
+import { AssociatedIndexFund } from "./index";
 
 export type RiskProfile = "conservative" | "moderate" | "aggressive";
 
 /**
- * Fund = admin-defined investment strategy / template.
+ * ProductType = sellable investment line (Madkhol: product_type — Savings, Tech, etc.).
  *
- * A Fund is NOT owned by a user or a portfolio. It's a named recipe of
- * target weights (see `FundAllocation`). Users invest INTO funds — the
- * link between a portfolio and the funds it has bought into is the
- * `FundInvestment` table.
+ * Admin-defined. Users subscribe via SubscribedPortfolio and add fund over time.
+ * Underlying symbol weights live in AssociatedIndexFund rows.
  */
-@Entity({ name: "funds", schema: "portfolio" })
-export class Fund {
+@Entity({ name: "product_types", schema: "portfolio" })
+export class ProductType {
   @PrimaryGeneratedColumn("uuid")
   id!: string;
 
@@ -37,7 +35,6 @@ export class Fund {
   @CreateDateColumn()
   createdAt!: Date;
 
-  /** Recipe rows — target weights per symbol. Sum should be ~1.0. */
-  @OneToMany(() => FundAllocation, (a) => a.fund)
-  allocations!: FundAllocation[];
+  @OneToMany(() => AssociatedIndexFund, (a) => a.productType)
+  associatedIndexFunds!: AssociatedIndexFund[];
 }

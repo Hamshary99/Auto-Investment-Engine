@@ -2,14 +2,14 @@ import "reflect-metadata";
 import { DataSource } from "typeorm";
 import { config } from "./config";
 import {
-  Portfolio,
+  UserPortfolio,
   Holding,
   Order,
   NavSnapshot,
   ProcessedMessage,
-  Fund,
-  FundAllocation,
-  FundInvestment,
+  ProductType,
+  AssociatedIndexFund,
+  SubscribedPortfolio,
 } from "./models/index";
 
 export const AppDataSource = new DataSource({
@@ -20,7 +20,16 @@ export const AppDataSource = new DataSource({
   password: config.db.password,
   database: config.db.database,
   schema: "portfolio",
-  entities: [Portfolio, Holding, Order, NavSnapshot, ProcessedMessage, Fund, FundAllocation, FundInvestment],
+  entities: [
+    UserPortfolio,
+    Holding,
+    Order,
+    NavSnapshot,
+    ProcessedMessage,
+    ProductType,
+    AssociatedIndexFund,
+    SubscribedPortfolio,
+  ],
   synchronize: true,
   logging: false,
 });

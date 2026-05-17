@@ -9,7 +9,7 @@ jest.mock("../src/data-source", () => ({
 import { OrderService } from "../src/services/order.service";
 import { ApiError } from "../src/utils/error.handler";
 import { FakeOrderRepository } from "./fakes/fake-order.repository";
-import { FakePortfolioRepository } from "./fakes/fake-portfolio.repository";
+import { FakeUserPortfolioRepository } from "./fakes/fake-user-portfolio.repository";
 import { FakeHoldingRepository } from "./fakes/fake-holding.repository";
 import { FakePublisher } from "./fakes/fake-publisher";
 import { ROUTING_KEYS } from "@auto-invest/shared";
@@ -19,11 +19,11 @@ const SEED_CASH = "100000.00";
 
 function buildSut() {
   const orders = new FakeOrderRepository();
-  const portfolios = new FakePortfolioRepository();
+  const userPortfolios = new FakeUserPortfolioRepository();
   const holdings = new FakeHoldingRepository();
   const publisher = new FakePublisher();
-  const service = new OrderService(orders, portfolios, holdings, publisher);
-  return { service, orders, portfolios, holdings, publisher };
+  const service = new OrderService(orders, userPortfolios, holdings, publisher);
+  return { service, orders, userPortfolios, holdings, publisher };
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -36,7 +36,7 @@ describe("OrderService.placeOrder", () => {
       userId: USER,
       order: { symbol: "aapl", side: "BUY" as const, quantity: 10 },
     };
-    const { service, orders, portfolios, publisher } = buildSut();
+    const { service, orders, userPortfolios, publisher } = buildSut();
 
     // ── ACT ───────────────────────────────────────────────────────────
     const saved = await service.placeOrder(input.userId, input.order);
@@ -50,7 +50,7 @@ describe("OrderService.placeOrder", () => {
       userId: USER, symbol: "AAPL", side: "BUY", quantity: "10", status: "PENDING",
     });
     expect(orders.all()).toHaveLength(1);
-    expect((await portfolios.findByUserId(USER))?.cashBalance).toBe(SEED_CASH);
+    expect((await userPortfolios.findByUserId(USER))?.cashBalance).toBe(SEED_CASH);
     expect(publisher.published).toHaveLength(1);
     expect(publisher.published[0]).toMatchObject({
       routingKey: ROUTING_KEYS.ORDER_CREATED,
@@ -92,7 +92,7 @@ describe("OrderService.findOrderForUser", () => {
 describe("OrderService.executeOrderTx", () => {
   it("BUY: creates a holding, decrements cash, transitions PENDING → EXECUTED", async () => {
     // ── INPUT ─────────────────────────────────────────────────────────
-    const { service, orders, portfolios, holdings } = buildSut();
+    const { service, orders, userPortfolios, holdings } = buildSut();
     const pending = await service.placeOrder(USER, { symbol: "AAPL", side: "BUY", quantity: 10 });
     const fill = { orderId: pending.id, price: 150 };
 
@@ -104,15 +104,15 @@ describe("OrderService.executeOrderTx", () => {
     // holding:   { quantity: "10", avgCost: "150" }
     // cash:      100000.00 → 98500.00   (= 100000 - 10*150)
     expect(await orders.findById(pending.id)).toMatchObject({ status: "EXECUTED", executedPrice: "150" });
-    const portfolio = (await portfolios.findByUserId(USER))!;
-    expect(holdings.get(portfolio.id, "AAPL")).toMatchObject({ quantity: "10", avgCost: "150" });
-    expect(portfolio.cashBalance).toBe("98500.00");
+    const userPortfolio = (await userPortfolios.findByUserId(USER))!;
+    expect(holdings.get(userPortfolio.id, "AAPL")).toMatchObject({ quantity: "10", avgCost: "150" });
+    expect(userPortfolio.cashBalance).toBe("98500.00");
   });
 
   it("BUY then BUY: weighted-average cost across two fills", async () => {
     // ── INPUT ─────────────────────────────────────────────────────────
     const fills = [{ qty: 10, price: 100 }, { qty: 10, price: 200 }];
-    const { service, portfolios, holdings } = buildSut();
+    const { service, userPortfolios, holdings } = buildSut();
 
     // ── ACT ───────────────────────────────────────────────────────────
     for (const f of fills) {
@@ -123,17 +123,17 @@ describe("OrderService.executeOrderTx", () => {
     // ── EXPECTED OUTPUT ───────────────────────────────────────────────
     // holding:  { quantity: "20.000000", avgCost: ~150 }  (1000+2000)/20
     // cash:     100000.00 → 97000.00
-    const portfolio = (await portfolios.findByUserId(USER))!;
-    const holding = holdings.get(portfolio.id, "AAPL")!;
+    const userPortfolio = (await userPortfolios.findByUserId(USER))!;
+    const holding = holdings.get(userPortfolio.id, "AAPL")!;
     expect(holding.quantity).toBe("20.000000");
     expect(Number(holding.avgCost)).toBeCloseTo(150, 6);
-    expect(portfolio.cashBalance).toBe("97000.00");
+    expect(userPortfolio.cashBalance).toBe("97000.00");
   });
 
   it("SELL: decrements quantity, increments cash, avgCost unchanged", async () => {
     // ── INPUT ─────────────────────────────────────────────────────────
     // setup: own 10 AAPL @ avg 100
-    const { service, orders, portfolios, holdings } = buildSut();
+    const { service, orders, userPortfolios, holdings } = buildSut();
     const buy = await service.placeOrder(USER, { symbol: "AAPL", side: "BUY", quantity: 10 });
     await service.executeOrderTx(undefined as any, buy.id, 100);
     const sell = await service.placeOrder(USER, { symbol: "AAPL", side: "SELL", quantity: 4 });
@@ -146,17 +146,17 @@ describe("OrderService.executeOrderTx", () => {
     // sell order:  EXECUTED
     // holding:     qty ≈ 6, avgCost still "100"
     // cash:        100000 - 1000 + 4*120 = 99480.00
-    const portfolio = (await portfolios.findByUserId(USER))!;
-    const holding = holdings.get(portfolio.id, "AAPL")!;
+    const userPortfolio = (await userPortfolios.findByUserId(USER))!;
+    const holding = holdings.get(userPortfolio.id, "AAPL")!;
     expect((await orders.findById(sell.id))?.status).toBe("EXECUTED");
     expect(Number(holding.quantity)).toBeCloseTo(6, 6);
     expect(holding.avgCost).toBe("100");
-    expect(portfolio.cashBalance).toBe("99480.00");
+    expect(userPortfolio.cashBalance).toBe("99480.00");
   });
 
   it("SELL with no position: order goes FAILED with reason, no holding created", async () => {
     // ── INPUT ─────────────────────────────────────────────────────────
-    const { service, orders, portfolios, holdings } = buildSut();
+    const { service, orders, userPortfolios, holdings } = buildSut();
     const sell = await service.placeOrder(USER, { symbol: "TSLA", side: "SELL", quantity: 1 });
 
     // ── ACT + EXPECTED OUTPUT ─────────────────────────────────────────
@@ -169,13 +169,13 @@ describe("OrderService.executeOrderTx", () => {
       status: "FAILED",
       failureReason: expect.stringMatching(/no position/i),
     });
-    const portfolio = (await portfolios.findByUserId(USER))!;
-    expect(holdings.get(portfolio.id, "TSLA")).toBeUndefined();
+    const userPortfolio = (await userPortfolios.findByUserId(USER))!;
+    expect(holdings.get(userPortfolio.id, "TSLA")).toBeUndefined();
   });
 
   it("oversell: order goes FAILED, existing holding qty untouched", async () => {
     // ── INPUT ─────────────────────────────────────────────────────────
-    const { service, orders, portfolios, holdings } = buildSut();
+    const { service, orders, userPortfolios, holdings } = buildSut();
     const buy = await service.placeOrder(USER, { symbol: "AAPL", side: "BUY", quantity: 5 });
     await service.executeOrderTx(undefined as any, buy.id, 100);
     const oversell = await service.placeOrder(USER, { symbol: "AAPL", side: "SELL", quantity: 999 });
@@ -189,23 +189,23 @@ describe("OrderService.executeOrderTx", () => {
       status: "FAILED",
       failureReason: expect.stringMatching(/oversell/i),
     });
-    const portfolio = (await portfolios.findByUserId(USER))!;
-    expect(holdings.get(portfolio.id, "AAPL")!.quantity).toBe("5");
+    const userPortfolio = (await userPortfolios.findByUserId(USER))!;
+    expect(holdings.get(userPortfolio.id, "AAPL")!.quantity).toBe("5");
   });
 
   it("already-terminal order is a no-op (replay-safe)", async () => {
     // ── INPUT ─────────────────────────────────────────────────────────
-    const { service, orders, portfolios } = buildSut();
+    const { service, orders, userPortfolios } = buildSut();
     const buy = await service.placeOrder(USER, { symbol: "AAPL", side: "BUY", quantity: 1 });
     await service.executeOrderTx(undefined as any, buy.id, 50);
-    const cashAfterFirstFill = (await portfolios.findByUserId(USER))!.cashBalance;
+    const cashAfterFirstFill = (await userPortfolios.findByUserId(USER))!.cashBalance;
 
     // ── ACT ───────────────────────────────────────────────────────────
     await service.executeOrderTx(undefined as any, buy.id, 50);
 
     // ── EXPECTED OUTPUT ───────────────────────────────────────────────
     // cash unchanged from first fill (not double-debited); order still EXECUTED
-    expect((await portfolios.findByUserId(USER))!.cashBalance).toBe(cashAfterFirstFill);
+    expect((await userPortfolios.findByUserId(USER))!.cashBalance).toBe(cashAfterFirstFill);
     expect((await orders.findById(buy.id))?.status).toBe("EXECUTED");
   });
 

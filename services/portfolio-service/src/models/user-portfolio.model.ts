@@ -1,8 +1,14 @@
 import { Column, CreateDateColumn, Entity, Index, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 import { Holding } from "./index";
 
-@Entity({ name: "portfolios", schema: "portfolio" })
-export class Portfolio {
+/**
+ * UserPortfolio = a user's cash bucket and share positions (Madkhol: user_portfolio).
+ *
+ * Not to be confused with catalog `Portfolio` templates in Madkhol — this is the
+ * per-user ledger of cash + holdings.
+ */
+@Entity({ name: "user_portfolios", schema: "portfolio" })
+export class UserPortfolio {
   @PrimaryGeneratedColumn("uuid")
   id!: string;
 
@@ -13,10 +19,9 @@ export class Portfolio {
   @Column({ type: "numeric", precision: 18, scale: 2, default: 0 })
   cashBalance!: string;
 
-  @OneToMany(() => Holding, (h) => h.portfolio)
+  @OneToMany(() => Holding, (h) => h.userPortfolio)
   holdings!: Holding[];
 
   @CreateDateColumn()
   createdAt!: Date;
-  
 }

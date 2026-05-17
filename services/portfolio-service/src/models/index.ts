@@ -1,10 +1,21 @@
-import { Portfolio } from './portfolio.model';
-import { Fund } from './fund.model';
-import { Holding } from './holding.model';
-import { NavSnapshot } from './nav-snapshot.model';
-import { Order } from './order.model';
-import { ProcessedMessage } from './processed-message.model';
-import { FundAllocation } from './fund-allocation.model';
-import { FundInvestment } from './fund-investment.model';
+import { UserPortfolio } from "./user-portfolio.model";
+import { ProductType } from "./product-type.model";
+import { Holding } from "./holding.model";
+import { NavSnapshot } from "./nav-snapshot.model";
+import { Order } from "./order.model";
+import { ProcessedMessage } from "./processed-message.model";
+import { AssociatedIndexFund } from "./associated-index-fund.model";
+import { SubscribedPortfolio } from "./subscribed-portfolio.model";
 
-export { Portfolio, Fund, Holding, NavSnapshot, Order, ProcessedMessage, FundAllocation, FundInvestment };
+export {
+  UserPortfolio,
+  ProductType,
+  Holding,
+  NavSnapshot,
+  Order,
+  ProcessedMessage,
+  AssociatedIndexFund,
+  SubscribedPortfolio,
+};
+
+export type { RiskProfile } from "./product-type.model";

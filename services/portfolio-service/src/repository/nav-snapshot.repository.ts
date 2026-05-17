@@ -7,11 +7,10 @@ export class NavSnapshotRepository {
     return tx ? tx.getRepository(NavSnapshot) : AppDataSource.getRepository(NavSnapshot);
   }
 
-  /**
-   * INSERT ... ON CONFLICT DO NOTHING via TypeORM's orIgnore(). Replays of the
-   * NAV snapshot job for the same (portfolioId, forDate) are safe no-ops.
-   */
-  insertIgnoreOnConflict(input: { portfolioId: string; forDate: string; navValue: string }, tx?: EntityManager) {
+  insertIgnoreOnConflict(
+    input: { userPortfolioId: string; forDate: string; navValue: string },
+    tx?: EntityManager,
+  ) {
     return this.repo(tx)
       .createQueryBuilder()
       .insert()
@@ -20,7 +19,10 @@ export class NavSnapshotRepository {
       .execute();
   }
 
-  latestForPortfolio(portfolioId: string, tx?: EntityManager): Promise<NavSnapshot | null> {
-    return this.repo(tx).findOne({ where: { portfolioId }, order: { forDate: "DESC" } });
+  latestForUserPortfolio(userPortfolioId: string, tx?: EntityManager): Promise<NavSnapshot | null> {
+    return this.repo(tx).findOne({
+      where: { userPortfolioId },
+      order: { forDate: "DESC" },
+    });
   }
 }

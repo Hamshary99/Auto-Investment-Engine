@@ -37,7 +37,7 @@ A small fintech microservices demo: users register (with email verification), pl
 
 - **app-service** ([services/app-service/src/index.ts](services/app-service/src/index.ts)) — Node/Express API gateway. Replaces the previous nginx ingress. Terminates client connections at `:8080`, applies Helmet + CORS (allow-list from `CORS_ORIGINS`) + global / auth-specific rate limits, verifies the user's JWT on protected routes, and forwards to upstream services via `http-proxy-middleware`. It mints a short-lived HMAC-signed `x-internal-auth` header (see [internal-token.ts](services/app-service/src/internal-token.ts)) so upstream services can trust the caller's identity without re-validating the JWT, and it strips any client-supplied internal headers before proxying ([auth.ts:36](services/app-service/src/auth.ts#L36)).
 - **auth-service** ([services/auth-service/src/index.ts](services/auth-service/src/index.ts)) — owns user accounts. Endpoints: `POST /register`, `POST /login`, `POST /verify`, `POST /resend-verification`, `GET /me` ([auth.routes.ts](services/auth-service/src/routes/auth.routes.ts)). Bcrypt password hashing, JWT (HS256). Email verification is mandatory in non-dev environments; in `NODE_ENV=development` the account is auto-verified for convenience ([auth.service.ts:26](services/auth-service/src/services/auth.service.ts#L26)).
-- **portfolio-service** — REST (`/orders`, `/portfolio`, `/nav`) + RabbitMQ consumers for order execution, NAV snapshots, and reconciliation. TypeORM against the `portfolio` schema.
+- **portfolio-service** — REST (`/orders`, `/user-portfolio`, `/product-types`, `/nav`) + RabbitMQ consumers for order execution, NAV snapshots, and reconciliation. Domain terms match Madkhol: `ProductType`, `SubscribedPortfolio`, `AssociatedIndexFund`, `UserPortfolio`. TypeORM against the `portfolio` schema.
 - **scheduler-service** — pure worker. Cron-driven publisher of `nav.snapshot.requested`, `reconciliation.requested`, `order.sweep.requested` events.
 
 ### Gateway auth flow
@@ -66,13 +66,13 @@ Token TTL is `EMAIL_VERIFICATION_TTL_HOURS` (default 24). Tokens are single-use 
 1. `POST /api/orders` writes an `Order(status=PENDING)` and publishes `order.created`.
 2. The `portfolio.order-execution` consumer picks it up, computes a fill price (mocked deterministically by symbol), and inside a single Postgres transaction:
    - inserts the `messageId` into the `processed_messages` inbox (idempotency guard),
-   - updates `Holding` (qty, avg cost) and `Portfolio.cashBalance`,
+   - updates `Holding` (qty, avg cost) and `UserPortfolio.cashBalance`,
    - transitions `Order` → `EXECUTED` (or `FAILED` if the leg throws).
 3. The midnight reconciliation cron publishes `reconciliation.requested`; the consumer flips any order still `PENDING` past the SLA → `FAILED` with a reason.
 
 ### Daily NAV
 
-At 21:00 UTC on weekdays the scheduler publishes `nav.snapshot.requested{forDate}`. The consumer computes `cash + Σ(qty × markPrice)` per portfolio and `INSERT ... ON CONFLICT DO NOTHING` into `nav_snapshots(portfolioId, forDate)` — replays are safe.
+At 21:00 UTC on weekdays the scheduler publishes `nav.snapshot.requested{forDate}`. The consumer computes `cash + Σ(qty × markPrice)` per user portfolio and `INSERT ... ON CONFLICT DO NOTHING` into `nav_snapshots(userPortfolioId, forDate)` — replays are safe.
 
 ## RabbitMQ topology
 
@@ -200,3 +200,10 @@ auto-invest-engine/
 - **Dev auto-verification** — convenient locally, but make sure `NODE_ENV` is never `development` in any deployed environment.
 - **Mock market data** — `mockMarketPrice(symbol)` is deterministic. A real system would call a market-data service or read a price cache.
 - **Reconciliation** here only fails stuck orders. Real reconciliation also cross-checks the broker's source-of-truth and may transition `PENDING → EXECUTED` based on confirmed fills.
+
+## Documentation
+
+| Doc | Purpose |
+|-----|---------|
+| [BUSINESS_AND_AUTO_INVEST.md](BUSINESS_AND_AUTO_INVEST.md) | Business model, Madkhol comparison, how auto-invest works |
+| [IMPLEMENTATION_ROADMAP.md](IMPLEMENTATION_ROADMAP.md) | What to build next, phases, APIs, interview talking points |

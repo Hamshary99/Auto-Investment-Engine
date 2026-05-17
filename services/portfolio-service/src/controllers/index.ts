@@ -1,9 +1,5 @@
-import { buildFundController } from "./fund.controller";
+import { buildProductTypeController } from "./product-type.controller";
 import { buildOrdersController } from "./orders.controller";
-import { buildPortfolioController } from "./portfolio.controller";
+import { buildUserPortfolioController } from "./user-portfolio.controller";
 
-export {
-    buildFundController,
-    buildOrdersController,
-    buildPortfolioController,
-};
+export { buildProductTypeController, buildOrdersController, buildUserPortfolioController };

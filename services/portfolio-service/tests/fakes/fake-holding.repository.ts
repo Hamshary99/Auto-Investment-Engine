@@ -1,26 +1,33 @@
 import { randomUUID } from "crypto";
 import { Holding } from "../../src/models/holding.model";
-import { Portfolio } from "../../src/models/portfolio.model";
+import { UserPortfolio } from "../../src/models/user-portfolio.model";
 import { HoldingRepository } from "../../src/repository/holding.repository";
 
 export class FakeHoldingRepository extends HoldingRepository {
   private byKey = new Map<string, Holding>();
 
-  private k(portfolioId: string, symbol: string) { return `${portfolioId}:${symbol}`; }
+  private k(userPortfolioId: string, symbol: string) {
+    return `${userPortfolioId}:${symbol}`;
+  }
 
-  async findByPortfolioAndSymbol(portfolioId: string, symbol: string): Promise<Holding | null> {
-    return this.byKey.get(this.k(portfolioId, symbol)) ?? null;
+  async findByUserPortfolioAndSymbol(userPortfolioId: string, symbol: string): Promise<Holding | null> {
+    return this.byKey.get(this.k(userPortfolioId, symbol)) ?? null;
   }
 
   async save(h: Holding): Promise<Holding> {
-    this.byKey.set(this.k(h.portfolio.id, h.symbol), h);
+    this.byKey.set(this.k(h.userPortfolio.id, h.symbol), h);
     return h;
   }
 
-  create(input: { portfolio: Portfolio; symbol: string; quantity: string; avgCost: string }): Holding {
+  create(input: {
+    userPortfolio: UserPortfolio;
+    symbol: string;
+    quantity: string;
+    avgCost: string;
+  }): Holding {
     return {
       id: randomUUID(),
-      portfolio: input.portfolio,
+      userPortfolio: input.userPortfolio,
       symbol: input.symbol,
       quantity: input.quantity,
       avgCost: input.avgCost,
@@ -28,7 +35,7 @@ export class FakeHoldingRepository extends HoldingRepository {
     };
   }
 
-  get(portfolioId: string, symbol: string): Holding | undefined {
-    return this.byKey.get(this.k(portfolioId, symbol));
+  get(userPortfolioId: string, symbol: string): Holding | undefined {
+    return this.byKey.get(this.k(userPortfolioId, symbol));
   }
 }

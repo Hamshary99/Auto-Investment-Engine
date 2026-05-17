@@ -1,43 +1,36 @@
 import { Holding } from "../models/index";
-import { PortfolioRepository, NavSnapshotRepository } from "../repository/index";
+import { UserPortfolioRepository, NavSnapshotRepository } from "../repository/index";
 import { cash, d } from "../utils/money";
 
-/**
- * Daily NAV (Net Asset Value) = cash + Σ(holding.qty × markPrice).
- * In a real system markPrice comes from a market-data service;
- * here we stub it as the holding's average cost.
- */
 export class NavService {
   constructor(
-    private readonly portfolios: PortfolioRepository,
-    private readonly snapshots: NavSnapshotRepository
+    private readonly userPortfolios: UserPortfolioRepository,
+    private readonly snapshots: NavSnapshotRepository,
   ) {}
 
-  /** Compute and persist a NAV row per portfolio. Re-runs for the same date are no-ops. */
   async snapshotAll(forDate: string): Promise<number> {
-    const portfolios = await this.portfolios.findAllWithHoldings();
-    for (const p of portfolios) {
+    const userPortfolios = await this.userPortfolios.findAllWithHoldings();
+    for (const p of userPortfolios) {
       const navValue = p.holdings.reduce(
         (sum, h) => sum.plus(d(h.quantity).times(markPrice(h))),
-        d(p.cashBalance)
+        d(p.cashBalance),
       );
       await this.snapshots.insertIgnoreOnConflict({
-        portfolioId: p.id,
+        userPortfolioId: p.id,
         forDate,
         navValue: cash(navValue),
       });
     }
-    return portfolios.length;
+    return userPortfolios.length;
   }
 
   async latestForUser(userId: string) {
-    const p = await this.portfolios.findByUserId(userId);
+    const p = await this.userPortfolios.findByUserId(userId);
     if (!p) return null;
-    return this.snapshots.latestForPortfolio(p.id);
+    return this.snapshots.latestForUserPortfolio(p.id);
   }
 }
 
 function markPrice(h: Holding): string {
-  // demo stub — real impl would fetch a live mark from a market-data service.
   return h.avgCost;
 }

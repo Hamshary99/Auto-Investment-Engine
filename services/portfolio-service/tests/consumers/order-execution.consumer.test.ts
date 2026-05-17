@@ -5,7 +5,7 @@ jest.mock("../../src/data-source", () => ({
 import { startOrderExecutionConsumer } from "../../src/consumers/order-execution.consumer";
 import { OrderService } from "../../src/services/order.service";
 import { FakeOrderRepository } from "../fakes/fake-order.repository";
-import { FakePortfolioRepository } from "../fakes/fake-portfolio.repository";
+import { FakeUserPortfolioRepository } from "../fakes/fake-user-portfolio.repository";
 import { FakeHoldingRepository } from "../fakes/fake-holding.repository";
 import { FakePublisher } from "../fakes/fake-publisher";
 import { FakeProcessedMessageRepository } from "../fakes/fake-processed-message.repository";
@@ -19,15 +19,15 @@ async function buildHarness() {
   const ctx = { channel: channel.asChannel(), exchange: "auto-invest.events", connection: {} as any };
 
   const orders = new FakeOrderRepository();
-  const portfolios = new FakePortfolioRepository();
+  const userPortfolios = new FakeUserPortfolioRepository();
   const holdings = new FakeHoldingRepository();
   const publisher = new FakePublisher();
   const inbox = new FakeProcessedMessageRepository();
-  const orderService = new OrderService(orders, portfolios, holdings, publisher);
+  const orderService = new OrderService(orders, userPortfolios, holdings, publisher);
 
   await startOrderExecutionConsumer(ctx, orderService, inbox);
   const pendingOrder = await orderService.placeOrder(USER, { symbol: "AAPL", side: "BUY", quantity: 10 });
-  return { channel, orders, portfolios, holdings, inbox, pendingOrder };
+  return { channel, orders, userPortfolios, holdings, inbox, pendingOrder };
 }
 
 function buildEnvelope(opts: {
@@ -57,7 +57,7 @@ function buildEnvelope(opts: {
 describe("order-execution consumer", () => {
   it("happy path: executes the order, debits cash, records messageId, ack's", async () => {
     // ── INPUT ─────────────────────────────────────────────────────────
-    const { channel, orders, portfolios, inbox, pendingOrder } = await buildHarness();
+    const { channel, orders, userPortfolios, inbox, pendingOrder } = await buildHarness();
     const envelope = buildEnvelope({
       orderId: pendingOrder.id,
       messageId: "msg-1",
@@ -74,7 +74,7 @@ describe("order-execution consumer", () => {
     // inbox:    contains "msg-1"
     // channel:  1 ack, 0 rejects
     expect((await orders.findById(pendingOrder.id))?.status).toBe("EXECUTED");
-    expect((await portfolios.findByUserId(USER))?.cashBalance).toBe("98500.00");
+    expect((await userPortfolios.findByUserId(USER))?.cashBalance).toBe("98500.00");
     expect(inbox.seen.has("msg-1")).toBe(true);
     expect(channel.acks).toHaveLength(1);
     expect(channel.rejects).toHaveLength(0);
@@ -83,7 +83,7 @@ describe("order-execution consumer", () => {
   it("duplicate delivery: inbox guard kicks in, side-effect runs only once, both ack", async () => {
     // ── INPUT ─────────────────────────────────────────────────────────
     // RabbitMQ redelivers the same envelope twice (same messageId).
-    const { channel, orders, portfolios, pendingOrder } = await buildHarness();
+    const { channel, orders, userPortfolios, pendingOrder } = await buildHarness();
     const envelope = buildEnvelope({ orderId: pendingOrder.id, messageId: "msg-1", priceHint: 150 });
 
     // ── ACT ───────────────────────────────────────────────────────────
@@ -95,7 +95,7 @@ describe("order-execution consumer", () => {
     // cash:    debited exactly once (98500.00, not 97000.00)
     // channel: 2 acks, 0 rejects   (second delivery acked-and-skipped)
     expect((await orders.findById(pendingOrder.id))?.status).toBe("EXECUTED");
-    expect((await portfolios.findByUserId(USER))?.cashBalance).toBe("98500.00");
+    expect((await userPortfolios.findByUserId(USER))?.cashBalance).toBe("98500.00");
     expect(channel.acks).toHaveLength(2);
     expect(channel.rejects).toHaveLength(0);
   });
