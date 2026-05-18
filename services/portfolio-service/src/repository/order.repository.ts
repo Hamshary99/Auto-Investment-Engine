@@ -1,6 +1,6 @@
 import { EntityManager, LessThan, Repository } from "typeorm";
 import { AppDataSource } from "../data-source";
-import { Order } from "../models/index";
+import { Order, OrderStatus } from "../models/index";
 
 export class OrderRepository {
   private repo(tx?: EntityManager): Repository<Order> {
@@ -11,12 +11,18 @@ export class OrderRepository {
     return this.repo(tx).findOne({ where: { id } });
   }
 
-  findByIdForUser(id: string, userId: string, tx?: EntityManager): Promise<Order | null> {
+  findByIdForUser(
+    id: string,
+    userId: string,
+    tx?: EntityManager,
+  ): Promise<Order | null> {
     return this.repo(tx).findOne({ where: { id, userId } });
   }
 
   findStuckPending(cutoff: Date, tx?: EntityManager): Promise<Order[]> {
-    return this.repo(tx).find({ where: { status: "PENDING", createdAt: LessThan(cutoff) } });
+    return this.repo(tx).find({
+      where: { status: OrderStatus.PENDING, createdAt: LessThan(cutoff) },
+    });
   }
 
   placeOrder(order: Partial<Order>, tx?: EntityManager): Promise<Order> {

@@ -1,4 +1,5 @@
 import { OrderRepository } from "../repository/order.repository";
+import { OrderStatus } from "../models/types";
 import { logger } from "../utils/logger";
 
 const STUCK_THRESHOLD_MS = 60 * 60 * 1000; // 1 hour SLA before a PENDING order is considered lost
@@ -18,7 +19,7 @@ export class ReconciliationService {
     const stuck = await this.orders.findStuckPending(cutoff);
 
     for (const o of stuck) {
-      o.status = "FAILED";
+      o.status = OrderStatus.FAILED;
       o.failureReason = `reconciliation ${forDate}: no broker confirmation within SLA`;
       await this.orders.save(o);
     }

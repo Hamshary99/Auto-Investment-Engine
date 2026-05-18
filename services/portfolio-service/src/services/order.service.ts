@@ -1,13 +1,20 @@
 import { EntityManager } from "typeorm";
 import { v4 as uuid } from "uuid";
 import { AppDataSource } from "../data-source";
-import { Order, UserPortfolio } from "../models/index";
-import { OrderSide } from "../models/order.model";
+import { Order, OrderSide, OrderStatus, UserPortfolio } from "../models/index";
 import { OrderRepository } from "../repository/order.repository";
 import { UserPortfolioRepository } from "../repository/user-portfolio.repository";
 import { HoldingRepository } from "../repository/holding.repository";
 import { ApiError } from "../utils/error.handler";
-import { addCash, addShares, cost, d, shares, subCash, weightedAvgCost } from "../utils/money";
+import {
+  addCash,
+  addShares,
+  cost,
+  d,
+  shares,
+  subCash,
+  weightedAvgCost,
+} from "../utils/money";
 import { Publisher, ROUTING_KEYS } from "@auto-invest/shared";
 
 const DEMO_SEED_CASH = "100000.00";
@@ -20,7 +27,10 @@ export class OrderService {
     private readonly publisher: Publisher,
   ) {}
 
-  async placeOrder(userId: string, input: { symbol: string; side: OrderSide; quantity: number }) {
+  async placeOrder(
+    userId: string,
+    input: { symbol: string; side: OrderSide; quantity: number },
+  ) {
     const order = await AppDataSource.transaction(async (tx) => {
       await this.ensureUserPortfolio(tx, userId);
       return this.orders.create(
@@ -29,7 +39,7 @@ export class OrderService {
           symbol: input.symbol.toUpperCase(),
           side: input.side,
           quantity: String(input.quantity),
-          status: "PENDING",
+          status: OrderStatus.PENDING,
         },
         tx,
       );
@@ -56,18 +66,35 @@ export class OrderService {
     return o;
   }
 
-  async executeOrderTx(tx: EntityManager, orderId: string, fillPrice: number): Promise<void> {
+  async executeOrderTx(
+    tx: EntityManager,
+    orderId: string,
+    fillPrice: number,
+  ): Promise<void> {
     const order = await this.orders.findById(orderId, tx);
-    if (!order) throw new ApiError(`order ${orderId} missing`, 404, "not_found");
-    if (order.status !== "PENDING") return;
+    if (!order)
+      throw new ApiError(`order ${orderId} missing`, 404, "not_found");
+    if (order.status !== OrderStatus.PENDING) return;
 
     try {
       const userPortfolio = await this.ensureUserPortfolio(tx, order.userId);
 
-      if (order.side === "BUY") {
-        await this.settleBuy(tx, userPortfolio, order.symbol, order.quantity, fillPrice);
+      if (order.side === OrderSide.BUY) {
+        await this.settleBuy(
+          tx,
+          userPortfolio,
+          order.symbol,
+          order.quantity,
+          fillPrice,
+        );
       } else {
-        await this.settleSell(tx, userPortfolio, order.symbol, order.quantity, fillPrice);
+        await this.settleSell(
+          tx,
+          userPortfolio,
+          order.symbol,
+          order.quantity,
+          fillPrice,
+        );
       }
 
       await this.markExecuted(tx, order, fillPrice);
@@ -85,7 +112,10 @@ export class OrderService {
     price: number,
   ) {
     await this.applyHoldingDelta(tx, userPortfolio, symbol, qty, price);
-    userPortfolio.cashBalance = subCash(userPortfolio.cashBalance, cost(qty, price));
+    userPortfolio.cashBalance = subCash(
+      userPortfolio.cashBalance,
+      cost(qty, price),
+    );
     await this.userPortfolios.save(userPortfolio, tx);
   }
 
@@ -96,8 +126,17 @@ export class OrderService {
     qty: string,
     price: number,
   ) {
-    await this.applyHoldingDelta(tx, userPortfolio, symbol, d(qty).negated().toString(), price);
-    userPortfolio.cashBalance = addCash(userPortfolio.cashBalance, cost(qty, price));
+    await this.applyHoldingDelta(
+      tx,
+      userPortfolio,
+      symbol,
+      d(qty).negated().toString(),
+      price,
+    );
+    userPortfolio.cashBalance = addCash(
+      userPortfolio.cashBalance,
+      cost(qty, price),
+    );
     await this.userPortfolios.save(userPortfolio, tx);
   }
 
@@ -108,11 +147,19 @@ export class OrderService {
     qtyDelta: string,
     price: number,
   ) {
-    const existing = await this.holdings.findByUserPortfolioAndSymbol(userPortfolio.id, symbol, tx);
+    const existing = await this.holdings.findByUserPortfolioAndSymbol(
+      userPortfolio.id,
+      symbol,
+      tx,
+    );
 
     if (!existing) {
       if (d(qtyDelta).isNegative()) {
-        throw new ApiError(`cannot sell ${symbol}: no position`, 400, "validation_error");
+        throw new ApiError(
+          `cannot sell ${symbol}: no position`,
+          400,
+          "validation_error",
+        );
       }
       const fresh = this.holdings.create(
         { userPortfolio, symbol, quantity: qtyDelta, avgCost: String(price) },
@@ -123,30 +170,46 @@ export class OrderService {
     }
 
     const newQty = addShares(existing.quantity, qtyDelta);
-    if (d(newQty).isNegative()) throw new ApiError(`oversell on ${symbol}`, 400, "validation_error");
+    if (d(newQty).isNegative())
+      throw new ApiError(`oversell on ${symbol}`, 400, "validation_error");
 
     if (d(qtyDelta).isPositive()) {
-      existing.avgCost = weightedAvgCost(existing.quantity, existing.avgCost, qtyDelta, price);
+      existing.avgCost = weightedAvgCost(
+        existing.quantity,
+        existing.avgCost,
+        qtyDelta,
+        price,
+      );
     }
     existing.quantity = shares(newQty);
     await this.holdings.save(existing, tx);
   }
 
-  private async markExecuted(tx: EntityManager, order: Order, fillPrice: number) {
-    order.status = "EXECUTED";
+  private async markExecuted(
+    tx: EntityManager,
+    order: Order,
+    fillPrice: number,
+  ) {
+    order.status = OrderStatus.EXECUTED;
     order.executedPrice = String(fillPrice);
     await this.orders.save(order, tx);
   }
 
   private async markFailed(tx: EntityManager, order: Order, reason: string) {
-    order.status = "FAILED";
+    order.status = OrderStatus.FAILED;
     order.failureReason = reason.slice(0, 500);
     await this.orders.save(order, tx);
   }
 
-  private async ensureUserPortfolio(tx: EntityManager, userId: string): Promise<UserPortfolio> {
+  private async ensureUserPortfolio(
+    tx: EntityManager,
+    userId: string,
+  ): Promise<UserPortfolio> {
     const existing = await this.userPortfolios.findByUserId(userId, tx);
     if (existing) return existing;
-    return this.userPortfolios.create({ userId, cashBalance: DEMO_SEED_CASH }, tx);
+    return this.userPortfolios.create(
+      { userId, cashBalance: DEMO_SEED_CASH },
+      tx,
+    );
   }
 }

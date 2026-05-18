@@ -5,7 +5,7 @@ import {
   UserPortfolioRepository,
 } from "../repository/index";
 import { Decimal } from "decimal.js";
-import { Order, ProductType } from "../models/index";
+import { Order, OrderSide, ProductType } from "../models/index";
 import { getStubPrice } from "./price.stub";
 import { OrderService } from "./order.service";
 
@@ -53,7 +53,7 @@ export class SubscribedPortfolioService {
 
       const order = await this.orderService.placeOrder(userId, {
         symbol: row.symbol,
-        side: "BUY",
+        side: OrderSide.BUY,
         quantity: quantity.toNumber(),
       });
       orders.push(order);
@@ -102,7 +102,7 @@ export class SubscribedPortfolioService {
 
       const order = await this.orderService.placeOrder(userId, {
         symbol: row.symbol,
-        side: "SELL",
+        side: OrderSide.SELL,
         quantity: quantity.toNumber(),
       });
       orders.push(order);
