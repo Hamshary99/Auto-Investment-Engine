@@ -1,5 +1,6 @@
 import "reflect-metadata";
 import { AppDataSource } from "../services/portfolio-service/src/data-source";
+import { RiskProfile } from "../services/portfolio-service/src/models/types";
 import {
   AssociatedIndexFund,
   ProductType,
@@ -11,12 +12,12 @@ import {
 type SeedProductType = {
   name: string;
   description: string;
-  riskProfile: "conservative" | "moderate" | "aggressive";
+  riskProfile: RiskProfile;
   funds: Array<{ symbol: string; targetWeight: number }>;
 };
 
 type SeedTemplate = {
-  riskProfile: "conservative" | "moderate" | "aggressive";
+  riskProfile: RiskProfile;
   allocations: Array<{ productTypeName: string; weight: number }>;
 };
 
@@ -31,7 +32,7 @@ const seedProductTypes: SeedProductType[] = [
     name: "Conservative Income",
     description:
       "Lower-risk portfolio targeting stable income and capital preservation.",
-    riskProfile: "conservative",
+    riskProfile: RiskProfile.Conservative,
     funds: [
       { symbol: "BND", targetWeight: 0.6 },
       { symbol: "VTI", targetWeight: 0.3 },
@@ -42,7 +43,7 @@ const seedProductTypes: SeedProductType[] = [
     name: "Balanced Growth",
     description:
       "Moderate growth portfolio with diversified equity and fixed-income exposure.",
-    riskProfile: "moderate",
+    riskProfile: RiskProfile.Moderate,
     funds: [
       { symbol: "VTI", targetWeight: 0.5 },
       { symbol: "QQQ", targetWeight: 0.3 },
@@ -52,7 +53,7 @@ const seedProductTypes: SeedProductType[] = [
   {
     name: "Aggressive Growth",
     description: "Higher-risk growth portfolio with heavier equity exposure.",
-    riskProfile: "aggressive",
+    riskProfile: RiskProfile.Aggressive,
     funds: [
       { symbol: "QQQ", targetWeight: 0.5 },
       { symbol: "ARKK", targetWeight: 0.3 },
@@ -63,7 +64,7 @@ const seedProductTypes: SeedProductType[] = [
 
 const seedRiskProfileTemplates: SeedTemplate[] = [
   {
-    riskProfile: "conservative",
+    riskProfile: RiskProfile.Conservative,
     allocations: [
       { productTypeName: "Conservative Income", weight: 0.7 },
       { productTypeName: "Balanced Growth", weight: 0.2 },
@@ -71,7 +72,7 @@ const seedRiskProfileTemplates: SeedTemplate[] = [
     ],
   },
   {
-    riskProfile: "moderate",
+    riskProfile: RiskProfile.Moderate,
     allocations: [
       { productTypeName: "Conservative Income", weight: 0.3 },
       { productTypeName: "Balanced Growth", weight: 0.5 },
@@ -79,7 +80,7 @@ const seedRiskProfileTemplates: SeedTemplate[] = [
     ],
   },
   {
-    riskProfile: "aggressive",
+    riskProfile: RiskProfile.Aggressive,
     allocations: [
       { productTypeName: "Conservative Income", weight: 0.1 },
       { productTypeName: "Balanced Growth", weight: 0.3 },
@@ -168,7 +169,7 @@ async function seed() {
       productTypes[seedType.name] = productType;
 
       const existingIndexFunds = await indexFundRepo.find({
-        where: { productType: { id: productType.id } },
+        where: { productType },
       });
       if (!existingIndexFunds.length) {
         for (const fund of seedType.funds) {
@@ -190,7 +191,7 @@ async function seed() {
         const existing = await templateRepo.findOne({
           where: {
             riskProfile: template.riskProfile,
-            productType: { id: productType.id },
+            productType,
           },
         });
 
@@ -222,7 +223,7 @@ async function seed() {
       }
 
       const existingAnswers = await answerRepo.find({
-        where: { question: { id: question.id } },
+        where: { question },
       });
       if (!existingAnswers.length) {
         for (const answer of questionSeed.answers) {
@@ -243,5 +244,9 @@ async function seed() {
 
 seed().catch((error) => {
   console.error("Seed failed:", error);
-  process.exit(1);
+  const proc = (globalThis as any).process;
+  if (proc?.exit) {
+    proc.exit(1);
+  }
+  throw error;
 });
