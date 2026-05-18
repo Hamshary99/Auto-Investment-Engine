@@ -6,6 +6,11 @@ import { Order } from "./order.model";
 import { ProcessedMessage } from "./processed-message.model";
 import { AssociatedIndexFund } from "./associated-index-fund.model";
 import { SubscribedPortfolio } from "./subscribed-portfolio.model";
+import { RiskProfileTemplate } from "./risk-profile-template.model";
+import { QuizQuestion } from "./quiz-question.model";
+import { QuizAnswer } from "./quiz-answer.model";
+import { AutoInvestPlan } from "./auto-invest-plan.model";
+import { AutoInvestAllocation } from "./auto-invest-allocation.model";
 
 export {
   UserPortfolio,
@@ -16,6 +21,11 @@ export {
   ProcessedMessage,
   AssociatedIndexFund,
   SubscribedPortfolio,
+  RiskProfileTemplate,
+  QuizQuestion,
+  QuizAnswer,
+  AutoInvestPlan,
+  AutoInvestAllocation,
 };
 
-export type { RiskProfile } from "./product-type.model";
+export { RiskProfile, OrderSide, OrderStatus } from "./types";

@@ -1,7 +1,12 @@
-import { Column, CreateDateColumn, Entity, Index, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
-
-export type OrderStatus = "PENDING" | "EXECUTED" | "FAILED";
-export type OrderSide = "BUY" | "SELL";
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  Index,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
+} from "typeorm";
+import { OrderSide, OrderStatus } from "./types";
 
 @Entity({ name: "orders", schema: "portfolio" })
 export class Order {
@@ -15,7 +20,7 @@ export class Order {
   @Column({ type: "varchar", length: 16 })
   symbol!: string;
 
-  @Column({ type: "varchar", length: 4 })
+  @Column({ type: "enum", enum: OrderSide, enumName: "order_side" })
   side!: OrderSide;
 
   @Column({ type: "numeric", precision: 18, scale: 6 })
@@ -25,7 +30,12 @@ export class Order {
   executedPrice?: string | null;
 
   @Index()
-  @Column({ type: "varchar", length: 16, default: "PENDING" })
+  @Column({
+    type: "enum",
+    enum: OrderStatus,
+    enumName: "order_status",
+    default: OrderStatus.PENDING,
+  })
   status!: OrderStatus;
 
   @Column({ type: "text", nullable: true })

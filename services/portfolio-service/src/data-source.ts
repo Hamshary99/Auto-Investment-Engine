@@ -10,6 +10,11 @@ import {
   ProductType,
   AssociatedIndexFund,
   SubscribedPortfolio,
+  RiskProfileTemplate,
+  QuizQuestion,
+  QuizAnswer,
+  AutoInvestPlan,
+  AutoInvestAllocation,
 } from "./models/index";
 
 export const AppDataSource = new DataSource({
@@ -29,6 +34,11 @@ export const AppDataSource = new DataSource({
     ProductType,
     AssociatedIndexFund,
     SubscribedPortfolio,
+    RiskProfileTemplate,
+    QuizQuestion,
+    QuizAnswer,
+    AutoInvestPlan,
+    AutoInvestAllocation,
   ],
   synchronize: true,
   logging: false,

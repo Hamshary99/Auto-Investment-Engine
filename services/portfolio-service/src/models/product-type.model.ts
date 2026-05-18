@@ -6,8 +6,9 @@ import {
   PrimaryGeneratedColumn,
 } from "typeorm";
 import { AssociatedIndexFund } from "./index";
+import { RiskProfile } from "./types";
 
-export type RiskProfile = "conservative" | "moderate" | "aggressive";
+export { RiskProfile };
 
 /**
  * ProductType = sellable investment line (Madkhol: product_type — Savings, Tech, etc.).
@@ -26,7 +27,7 @@ export class ProductType {
   @Column({ type: "text", nullable: true })
   description!: string | null;
 
-  @Column({ type: "varchar", length: 20 })
+  @Column({ type: "enum", enum: RiskProfile, enumName: "risk_profile" })
   riskProfile!: RiskProfile;
 
   @Column({ type: "boolean", default: true })
