@@ -8,8 +8,7 @@ import {
   Unique,
   UpdateDateColumn,
 } from "typeorm";
-import { AutoInvestPlan } from "./auto-invest-plan.model";
-import { ProductType } from "./product-type.model";
+import { AutoInvestPlan, ProductType } from "./index";
 
 @Entity({ name: "auto_invest_allocations", schema: "portfolio" })
 @Unique(["plan", "productType"])

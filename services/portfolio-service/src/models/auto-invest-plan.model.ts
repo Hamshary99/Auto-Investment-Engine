@@ -15,12 +15,18 @@ export class AutoInvestPlan {
   @PrimaryGeneratedColumn("uuid")
   id!: string;
 
-  @Index({ unique: true })
+  @Index()
   @Column({ type: "uuid" })
   userId!: string;
 
+  @Column({ type: "varchar", length: 80 })
+  name!: string;
+
   @Column({ type: "enum", enum: RiskProfile, enumName: "risk_profile" })
   riskProfile!: RiskProfile;
+
+  @Column({ type: "numeric", precision: 18, scale: 2, default: 0 })
+  cashBalance!: string;
 
   @Column({ type: "numeric", precision: 5, scale: 4, default: 0.01 })
   reservePct!: number;

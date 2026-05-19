@@ -1,7 +1,6 @@
 import { EntityManager, Repository } from "typeorm";
 import { AppDataSource } from "../data-source";
-import { AutoInvestPlan } from "../models/auto-invest-plan.model";
-import { AutoInvestAllocation } from "../models/auto-invest-allocation.model";
+import { AutoInvestPlan, AutoInvestAllocation } from "../models/index";
 
 export class AutoInvestPlanRepository {
   private planRepo(tx?: EntityManager): Repository<AutoInvestPlan> {
@@ -16,12 +15,24 @@ export class AutoInvestPlanRepository {
       : AppDataSource.getRepository(AutoInvestAllocation);
   }
 
-  findByUserId(
-    userId: string,
-    tx?: EntityManager,
-  ): Promise<AutoInvestPlan | null> {
-    return this.planRepo(tx).findOne({
+  listByUserId(userId: string, tx?: EntityManager): Promise<AutoInvestPlan[]> {
+    return this.planRepo(tx).find({
       where: { userId },
+      relations: { allocations: { productType: true } },
+      order: { createdAt: "ASC" },
+    });
+  }
+
+  findById(planId: string, tx?: EntityManager): Promise<AutoInvestPlan | null> {
+    return this.planRepo(tx).findOne({
+      where: { id: planId },
+      relations: { allocations: { productType: true } },
+    });
+  }
+
+  findAutoInvestEnabled(tx?: EntityManager): Promise<AutoInvestPlan[]> {
+    return this.planRepo(tx).find({
+      where: { autoInvest: true },
       relations: { allocations: { productType: true } },
     });
   }
@@ -38,27 +49,26 @@ export class AutoInvestPlanRepository {
     return r.save(r.create(input));
   }
 
-  findAllocationsByPlanId(
-    planId: string,
+  createAllocations(
+    rows: Partial<AutoInvestAllocation>[],
     tx?: EntityManager,
   ): Promise<AutoInvestAllocation[]> {
-    return this.allocationRepo(tx).find({
-      where: { plan: { id: planId } },
-      relations: { productType: true },
-      order: { productType: { name: "ASC" } },
-    });
-  }
-
-  deleteAllocationsByPlanId(planId: string, tx: EntityManager): Promise<void> {
-    const repo = this.allocationRepo(tx);
-    return repo.delete({ plan: { id: planId } }).then(() => undefined);
-  }
-
-  createAllocation(
-    input: Partial<AutoInvestAllocation>,
-    tx?: EntityManager,
-  ): Promise<AutoInvestAllocation> {
     const r = this.allocationRepo(tx);
-    return r.save(r.create(input));
+    return r.save(r.create(rows));
+  }
+
+  deleteAllocationsByPlanId(
+    planId: string,
+    tx?: EntityManager,
+  ): Promise<void> {
+    return this.allocationRepo(tx)
+      .delete({ plan: { id: planId } })
+      .then(() => undefined);
+  }
+
+  deletePlanById(planId: string, tx?: EntityManager): Promise<void> {
+    return this.planRepo(tx)
+      .delete({ id: planId })
+      .then(() => undefined);
   }
 }

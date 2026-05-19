@@ -1,4 +1,4 @@
-import { EntityManager, Repository } from "typeorm";
+import { EntityManager, In, Repository } from "typeorm";
 import { AppDataSource } from "../data-source";
 import { ProductType } from "../models/index";
 import { RiskProfile } from "../models/product-type.model";
@@ -25,6 +25,11 @@ export class ProductTypeRepository {
       where: { id, isActive: true },
       relations: withRelations ? { associatedIndexFunds: true } : undefined,
     });
+  }
+
+  findActiveByIds(ids: string[], tx?: EntityManager): Promise<ProductType[]> {
+    if (ids.length === 0) return Promise.resolve([]);
+    return this.repo(tx).find({ where: { id: In(ids), isActive: true } });
   }
 
   findByRiskProfile(riskProfile: RiskProfile, tx?: EntityManager): Promise<ProductType[]> {
