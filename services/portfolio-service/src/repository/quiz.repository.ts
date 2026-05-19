@@ -1,7 +1,9 @@
 import { EntityManager, Repository } from "typeorm";
 import { AppDataSource } from "../data-source";
-import { QuizQuestion } from "../models/quiz-question.model";
-import { QuizAnswer } from "../models/quiz-answer.model";
+import {
+  QuizQuestion,
+  QuizAnswer
+ } from "../models/index";
 
 export class QuizRepository {
   private questionRepo(tx?: EntityManager): Repository<QuizQuestion> {

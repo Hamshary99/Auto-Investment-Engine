@@ -1,10 +1,17 @@
 import { EntityManager } from "typeorm";
 import { v4 as uuid } from "uuid";
 import { AppDataSource } from "../data-source";
-import { Order, OrderSide, OrderStatus, UserPortfolio } from "../models/index";
-import { OrderRepository } from "../repository/order.repository";
-import { UserPortfolioRepository } from "../repository/user-portfolio.repository";
-import { HoldingRepository } from "../repository/holding.repository";
+import {
+  Order,
+  OrderSide,
+  OrderStatus,
+  UserPortfolio
+} from "../models/index";
+import {
+  UserPortfolioRepository,
+  OrderRepository,
+  HoldingRepository,
+ } from "../repository/index";
 import { ApiError } from "../utils/error.handler";
 import {
   addCash,
@@ -156,7 +163,7 @@ export class OrderService {
     if (!existing) {
       if (d(qtyDelta).isNegative()) {
         throw new ApiError(
-          `cannot sell ${symbol}: no position`,
+          `cannot sell ${symbol}: no position to sell into (oversell)`,
           400,
           "validation_error",
         );

@@ -6,6 +6,7 @@ import { ApiError } from "../utils/error.handler";
 import {
   AutoInvestPlanRepository,
   ProductTypeRepository,
+  RiskProfileTemplateRepository,
 } from "../repository/index";
 
 type AllocationInput = { productTypeId: string; weight: number };
@@ -16,6 +17,7 @@ export class InvestmentPlanService {
   constructor(
     private planRepo: AutoInvestPlanRepository,
     private productTypeRepo: ProductTypeRepository,
+    private riskTemplateRepo: RiskProfileTemplateRepository,
   ) {}
 
   listPlansByUserId(userId: string): Promise<AutoInvestPlan[]> {
@@ -37,7 +39,7 @@ export class InvestmentPlanService {
   async createPlan(input: {
     userId: string;
     name: string;
-    riskProfile: RiskProfile;
+    riskProfile?: RiskProfile;
     reservePct: number;
     autoInvest: boolean;
     allocations: AllocationInput[];
@@ -67,6 +69,59 @@ export class InvestmentPlanService {
 
       return this.requirePlan(plan.id, tx);
     });
+  }
+
+  async createPlanFromRiskProfile(input: {
+    userId: string;
+    riskProfile: RiskProfile;
+    reservePct?: number;
+    autoInvest?: boolean;
+  }): Promise<AutoInvestPlan> {
+    return AppDataSource.transaction(async (tx) => {
+      const templateRows = await this.riskTemplateRepo.findByRiskProfile(
+        input.riskProfile,
+        tx,
+      );
+      if (templateRows.length === 0) {
+        throw new ApiError(
+          `No risk profile template configured for ${input.riskProfile}`,
+          400,
+          "invalid_input",
+        );
+      }
+
+      const allocations = this.validateAllocations(
+        templateRows.map((r) => ({
+          productTypeId: r.productType.id,
+          weight: Number(r.weight),
+        })),
+      );
+      await this.assertProductTypesActive(allocations, tx);
+
+      const plan = await this.planRepo.create(
+        {
+          userId: input.userId,
+          name: this.autoGeneratePlanName(input.riskProfile),
+          riskProfile: input.riskProfile,
+          reservePct: input.reservePct ?? 0.01,
+          autoInvest: input.autoInvest ?? true,
+        },
+        tx,
+      );
+
+      await this.planRepo.createAllocations(
+        this.buildAllocationRows(plan.id, allocations),
+        tx,
+      );
+
+      return this.requirePlan(plan.id, tx);
+    });
+  }
+
+  private autoGeneratePlanName(riskProfile: RiskProfile): string {
+    const label = riskProfile.charAt(0).toUpperCase() + riskProfile.slice(1);
+    const stamp = new Date().toISOString().slice(0, 10);
+    return `${label} plan – ${stamp}`;
   }
 
   async updatePlanAllocations(input: {
@@ -115,6 +170,16 @@ export class InvestmentPlanService {
       return this.requirePlan(plan.id, tx);
     });
   }
+
+  // TODO: implement method to trigger manual allocation based on current plan and portfolio state
+  // async manualAllocate(
+  //   planId: string,
+  //   userId: string,
+  //   allocations: AllocationInput[],
+  //   tx?: EntityManager,
+  // ): Promise<void> {
+    
+  // }
 
   async deletePlan(planId: string, userId: string): Promise<void> {
     await AppDataSource.transaction(async (tx) => {
