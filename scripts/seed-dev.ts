@@ -169,7 +169,7 @@ async function seed() {
       productTypes[seedType.name] = productType;
 
       const existingIndexFunds = await indexFundRepo.find({
-        where: { productType },
+        where: { productType: { id: productType.id } },
       });
       if (!existingIndexFunds.length) {
         for (const fund of seedType.funds) {
@@ -191,7 +191,7 @@ async function seed() {
         const existing = await templateRepo.findOne({
           where: {
             riskProfile: template.riskProfile,
-            productType,
+            productType: { id: productType.id },
           },
         });
 
@@ -223,7 +223,7 @@ async function seed() {
       }
 
       const existingAnswers = await answerRepo.find({
-        where: { question },
+        where: { question: { id: question.id } },
       });
       if (!existingAnswers.length) {
         for (const answer of questionSeed.answers) {

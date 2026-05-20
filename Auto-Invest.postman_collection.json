@@ -6,244 +6,1086 @@
   },
   "auth": {
     "type": "bearer",
-    "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
   },
   "variable": [
-    { "key": "baseUrl", "value": "http://localhost:8080", "type": "string" },
-    { "key": "token", "value": "", "type": "string" },
-    { "key": "userId", "value": "", "type": "string" },
-    { "key": "orderId", "value": "", "type": "string" }
+    {
+      "key": "gatewayUrl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "authUrl",
+      "value": "http://localhost:3001",
+      "type": "string"
+    },
+    {
+      "key": "portfolioUrl",
+      "value": "http://localhost:3002",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "userId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "orderId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "productTypeId",
+      "value": "",
+      "type": "string"
+    }
   ],
   "item": [
     {
-      "name": "Health",
+      "name": "App Gateway",
       "item": [
         {
-          "name": "Nginx Health",
-          "request": {
-            "auth": { "type": "noauth" },
-            "method": "GET",
-            "header": [],
-            "url": { "raw": "{{baseUrl}}/health", "host": ["{{baseUrl}}"], "path": ["health"] }
-          }
+          "name": "Health",
+          "item": [
+            {
+              "name": "Nginx Health",
+              "request": {
+                "auth": {
+                  "type": "noauth"
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{gatewayUrl}}/health",
+                  "host": [
+                    "{{gatewayUrl}}"
+                  ],
+                  "path": [
+                    "health"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Auth",
+          "item": [
+            {
+              "name": "Register",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const res = pm.response.json();",
+                      "if (res.token) { pm.collectionVariables.set('token', res.token); }",
+                      "if (res.id)    { pm.collectionVariables.set('userId', res.id); }",
+                      "pm.test('201 Created', () => pm.response.to.have.status(201));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "auth": {
+                  "type": "noauth"
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"test+{{$timestamp}}@example.com\",\n  \"password\": \"password123\"\n}"
+                },
+                "url": {
+                  "raw": "{{gatewayUrl}}/auth/register",
+                  "host": [
+                    "{{gatewayUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "register"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Login",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const res = pm.response.json();",
+                      "if (res.token) { pm.collectionVariables.set('token', res.token); }",
+                      "if (res.id)    { pm.collectionVariables.set('userId', res.id); }",
+                      "pm.test('200 OK', () => pm.response.to.have.status(200));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "auth": {
+                  "type": "noauth"
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"password123\"\n}"
+                },
+                "url": {
+                  "raw": "{{gatewayUrl}}/auth/login",
+                  "host": [
+                    "{{gatewayUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "login"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Get Current User (/auth/me)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{gatewayUrl}}/auth/me",
+                  "host": [
+                    "{{gatewayUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "me"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Portfolio",
+          "item": [
+            {
+              "name": "Get Portfolio",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{gatewayUrl}}/api/portfolio",
+                  "host": [
+                    "{{gatewayUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "portfolio"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Get Latest NAV Snapshot",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{gatewayUrl}}/api/nav",
+                  "host": [
+                    "{{gatewayUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "nav"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Orders",
+          "item": [
+            {
+              "name": "Create BUY Order",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const res = pm.response.json();",
+                      "if (res.id) { pm.collectionVariables.set('orderId', res.id); }",
+                      "pm.test('202 Accepted', () => pm.response.to.have.status(202));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"symbol\": \"AAPL\",\n  \"side\": \"BUY\",\n  \"quantity\": 10\n}"
+                },
+                "url": {
+                  "raw": "{{gatewayUrl}}/api/orders",
+                  "host": [
+                    "{{gatewayUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "orders"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Create SELL Order",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const res = pm.response.json();",
+                      "if (res.id) { pm.collectionVariables.set('orderId', res.id); }"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"symbol\": \"AAPL\",\n  \"side\": \"SELL\",\n  \"quantity\": 5\n}"
+                },
+                "url": {
+                  "raw": "{{gatewayUrl}}/api/orders",
+                  "host": [
+                    "{{gatewayUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "orders"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Get Order by ID",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{gatewayUrl}}/api/orders/{{orderId}}",
+                  "host": [
+                    "{{gatewayUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "orders",
+                    "{{orderId}}"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Quiz & Auto-Invest",
+          "item": [
+            {
+              "name": "Get Active Quiz Questions",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{gatewayUrl}}/api/quiz",
+                  "host": [
+                    "{{gatewayUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "quiz"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Submit Quiz",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "[\n  {\n    \"questionId\": \"12345678-1234-1234-1234-123456789012\",\n    \"score\": 2\n  }\n]"
+                },
+                "url": {
+                  "raw": "{{gatewayUrl}}/api/quiz/submit",
+                  "host": [
+                    "{{gatewayUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "quiz",
+                    "submit"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "List Investment Plans",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{gatewayUrl}}/api/plan",
+                  "host": [
+                    "{{gatewayUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "plan"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Create Investment Plan from Quiz",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"riskProfile\": \"moderate\",\n  \"reservePct\": 0.1,\n  \"autoInvest\": true\n}"
+                },
+                "url": {
+                  "raw": "{{gatewayUrl}}/api/plan/from-quiz",
+                  "host": [
+                    "{{gatewayUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "plan",
+                    "from-quiz"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Product Types & Manual Investing",
+          "item": [
+            {
+              "name": "List Product Types",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const res = pm.response.json();",
+                      "if (res.length > 0) { pm.collectionVariables.set('productTypeId', res[0].id); }"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{gatewayUrl}}/api/product-types",
+                  "host": [
+                    "{{gatewayUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "product-types"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Add Fund to Product Type",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"amount\": 1000\n}"
+                },
+                "url": {
+                  "raw": "{{gatewayUrl}}/api/product-types/{{productTypeId}}/add-fund",
+                  "host": [
+                    "{{gatewayUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "product-types",
+                    "{{productTypeId}}",
+                    "add-fund"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Redeem Fund from Product Type",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"amount\": 500\n}"
+                },
+                "url": {
+                  "raw": "{{gatewayUrl}}/api/product-types/{{productTypeId}}/redeem",
+                  "host": [
+                    "{{gatewayUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "product-types",
+                    "{{productTypeId}}",
+                    "redeem"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Negative / Edge Cases",
+          "item": [
+            {
+              "name": "Register - Invalid (short password)",
+              "request": {
+                "auth": {
+                  "type": "noauth"
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"bad@example.com\",\n  \"password\": \"short\"\n}"
+                },
+                "url": {
+                  "raw": "{{gatewayUrl}}/auth/register",
+                  "host": [
+                    "{{gatewayUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "register"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Login - Wrong Credentials",
+              "request": {
+                "auth": {
+                  "type": "noauth"
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"nobody@example.com\",\n  \"password\": \"wrongpass\"\n}"
+                },
+                "url": {
+                  "raw": "{{gatewayUrl}}/auth/login",
+                  "host": [
+                    "{{gatewayUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "login"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Portfolio - No Token (401)",
+              "request": {
+                "auth": {
+                  "type": "noauth"
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{gatewayUrl}}/api/portfolio",
+                  "host": [
+                    "{{gatewayUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "portfolio"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Create Order - Invalid Quantity",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"symbol\": \"AAPL\",\n  \"side\": \"BUY\",\n  \"quantity\": 0\n}"
+                },
+                "url": {
+                  "raw": "{{gatewayUrl}}/api/orders",
+                  "host": [
+                    "{{gatewayUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "orders"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Create Order - Oversell (409)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"symbol\": \"AAPL\",\n  \"side\": \"SELL\",\n  \"quantity\": 99999\n}"
+                },
+                "url": {
+                  "raw": "{{gatewayUrl}}/api/orders",
+                  "host": [
+                    "{{gatewayUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "orders"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Get Order - Not Found",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{gatewayUrl}}/api/orders/00000000-0000-0000-0000-000000000000",
+                  "host": [
+                    "{{gatewayUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "orders",
+                    "00000000-0000-0000-0000-000000000000"
+                  ]
+                }
+              }
+            }
+          ]
         }
       ]
     },
     {
-      "name": "Auth",
+      "name": "Auth Service",
       "item": [
         {
-          "name": "Register",
-          "event": [
+          "name": "Auth",
+          "item": [
             {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "const res = pm.response.json();",
-                  "if (res.token) { pm.collectionVariables.set('token', res.token); }",
-                  "if (res.id)    { pm.collectionVariables.set('userId', res.id); }",
-                  "pm.test('201 Created', () => pm.response.to.have.status(201));"
-                ]
+              "name": "Register",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const res = pm.response.json();",
+                      "if (res.token) { pm.collectionVariables.set('token', res.token); }",
+                      "if (res.id)    { pm.collectionVariables.set('userId', res.id); }",
+                      "pm.test('201 Created', () => pm.response.to.have.status(201));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "auth": {
+                  "type": "noauth"
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"test+{{$timestamp}}@example.com\",\n  \"password\": \"password123\"\n}"
+                },
+                "url": {
+                  "raw": "{{authUrl}}/register",
+                  "host": [
+                    "{{authUrl}}"
+                  ],
+                  "path": [
+                    "register"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Login",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const res = pm.response.json();",
+                      "if (res.token) { pm.collectionVariables.set('token', res.token); }",
+                      "if (res.id)    { pm.collectionVariables.set('userId', res.id); }",
+                      "pm.test('200 OK', () => pm.response.to.have.status(200));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "auth": {
+                  "type": "noauth"
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"password123\"\n}"
+                },
+                "url": {
+                  "raw": "{{authUrl}}/login",
+                  "host": [
+                    "{{authUrl}}"
+                  ],
+                  "path": [
+                    "login"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Get Current User (/auth/me)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{authUrl}}/me",
+                  "host": [
+                    "{{authUrl}}"
+                  ],
+                  "path": [
+                    "me"
+                  ]
+                }
               }
             }
-          ],
-          "request": {
-            "auth": { "type": "noauth" },
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"test+{{$timestamp}}@example.com\",\n  \"password\": \"password123\"\n}"
-            },
-            "url": { "raw": "{{baseUrl}}/auth/register", "host": ["{{baseUrl}}"], "path": ["auth", "register"] }
-          }
-        },
-        {
-          "name": "Login",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "const res = pm.response.json();",
-                  "if (res.token) { pm.collectionVariables.set('token', res.token); }",
-                  "if (res.id)    { pm.collectionVariables.set('userId', res.id); }",
-                  "pm.test('200 OK', () => pm.response.to.have.status(200));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "auth": { "type": "noauth" },
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"password123\"\n}"
-            },
-            "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] }
-          }
-        },
-        {
-          "name": "Get Current User (/auth/me)",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": { "raw": "{{baseUrl}}/auth/me", "host": ["{{baseUrl}}"], "path": ["auth", "me"] }
-          }
+          ]
         }
       ]
     },
     {
-      "name": "Portfolio",
+      "name": "Portfolio Service",
       "item": [
         {
-          "name": "Get Portfolio",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": { "raw": "{{baseUrl}}/api/portfolio", "host": ["{{baseUrl}}"], "path": ["api", "portfolio"] }
-          }
-        },
-        {
-          "name": "Get Latest NAV Snapshot",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": { "raw": "{{baseUrl}}/api/nav", "host": ["{{baseUrl}}"], "path": ["api", "nav"] }
-          }
-        }
-      ]
-    },
-    {
-      "name": "Orders",
-      "item": [
-        {
-          "name": "Create BUY Order",
-          "event": [
+          "name": "Portfolio",
+          "item": [
             {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "const res = pm.response.json();",
-                  "if (res.id) { pm.collectionVariables.set('orderId', res.id); }",
-                  "pm.test('202 Accepted', () => pm.response.to.have.status(202));"
-                ]
+              "name": "Get Portfolio",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{portfolioUrl}}/portfolio",
+                  "host": [
+                    "{{portfolioUrl}}"
+                  ],
+                  "path": [
+                    "portfolio"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Get Latest NAV Snapshot",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{portfolioUrl}}/nav",
+                  "host": [
+                    "{{portfolioUrl}}"
+                  ],
+                  "path": [
+                    "nav"
+                  ]
+                }
               }
             }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"symbol\": \"AAPL\",\n  \"side\": \"BUY\",\n  \"quantity\": 10\n}"
-            },
-            "url": { "raw": "{{baseUrl}}/api/orders", "host": ["{{baseUrl}}"], "path": ["api", "orders"] }
-          }
+          ]
         },
         {
-          "name": "Create SELL Order",
-          "event": [
+          "name": "Orders",
+          "item": [
             {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "const res = pm.response.json();",
-                  "if (res.id) { pm.collectionVariables.set('orderId', res.id); }"
-                ]
+              "name": "Create BUY Order",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const res = pm.response.json();",
+                      "if (res.id) { pm.collectionVariables.set('orderId', res.id); }",
+                      "pm.test('202 Accepted', () => pm.response.to.have.status(202));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"symbol\": \"AAPL\",\n  \"side\": \"BUY\",\n  \"quantity\": 10\n}"
+                },
+                "url": {
+                  "raw": "{{portfolioUrl}}/orders",
+                  "host": [
+                    "{{portfolioUrl}}"
+                  ],
+                  "path": [
+                    "orders"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Create SELL Order",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const res = pm.response.json();",
+                      "if (res.id) { pm.collectionVariables.set('orderId', res.id); }"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"symbol\": \"AAPL\",\n  \"side\": \"SELL\",\n  \"quantity\": 5\n}"
+                },
+                "url": {
+                  "raw": "{{portfolioUrl}}/orders",
+                  "host": [
+                    "{{portfolioUrl}}"
+                  ],
+                  "path": [
+                    "orders"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Get Order by ID",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{portfolioUrl}}/orders/{{orderId}}",
+                  "host": [
+                    "{{portfolioUrl}}"
+                  ],
+                  "path": [
+                    "orders",
+                    "{{orderId}}"
+                  ]
+                }
               }
             }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"symbol\": \"AAPL\",\n  \"side\": \"SELL\",\n  \"quantity\": 5\n}"
+          ]
+        },
+        {
+          "name": "Quiz & Auto-Invest",
+          "item": [
+            {
+              "name": "Get Active Quiz Questions",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{portfolioUrl}}/quiz",
+                  "host": [
+                    "{{portfolioUrl}}"
+                  ],
+                  "path": [
+                    "quiz"
+                  ]
+                }
+              }
             },
-            "url": { "raw": "{{baseUrl}}/api/orders", "host": ["{{baseUrl}}"], "path": ["api", "orders"] }
-          }
-        },
-        {
-          "name": "Get Order by ID",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/orders/{{orderId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "orders", "{{orderId}}"]
+            {
+              "name": "Submit Quiz",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "[\n  {\n    \"questionId\": \"12345678-1234-1234-1234-123456789012\",\n    \"score\": 2\n  }\n]"
+                },
+                "url": {
+                  "raw": "{{portfolioUrl}}/quiz/submit",
+                  "host": [
+                    "{{portfolioUrl}}"
+                  ],
+                  "path": [
+                    "quiz",
+                    "submit"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "List Investment Plans",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{portfolioUrl}}/plan",
+                  "host": [
+                    "{{portfolioUrl}}"
+                  ],
+                  "path": [
+                    "plan"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Create Investment Plan from Quiz",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"riskProfile\": \"moderate\",\n  \"reservePct\": 0.1,\n  \"autoInvest\": true\n}"
+                },
+                "url": {
+                  "raw": "{{portfolioUrl}}/plan/from-quiz",
+                  "host": [
+                    "{{portfolioUrl}}"
+                  ],
+                  "path": [
+                    "plan",
+                    "from-quiz"
+                  ]
+                }
+              }
             }
-          }
-        }
-      ]
-    },
-    {
-      "name": "Negative / Edge Cases",
-      "item": [
-        {
-          "name": "Register - Invalid (short password)",
-          "request": {
-            "auth": { "type": "noauth" },
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"email\": \"bad@example.com\",\n  \"password\": \"short\"\n}" },
-            "url": { "raw": "{{baseUrl}}/auth/register", "host": ["{{baseUrl}}"], "path": ["auth", "register"] }
-          }
+          ]
         },
         {
-          "name": "Login - Wrong Credentials",
-          "request": {
-            "auth": { "type": "noauth" },
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"email\": \"nobody@example.com\",\n  \"password\": \"wrongpass\"\n}" },
-            "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] }
-          }
-        },
-        {
-          "name": "Portfolio - No Token (401)",
-          "request": {
-            "auth": { "type": "noauth" },
-            "method": "GET",
-            "header": [],
-            "url": { "raw": "{{baseUrl}}/api/portfolio", "host": ["{{baseUrl}}"], "path": ["api", "portfolio"] }
-          }
-        },
-        {
-          "name": "Create Order - Invalid Quantity",
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"symbol\": \"AAPL\",\n  \"side\": \"BUY\",\n  \"quantity\": 0\n}" },
-            "url": { "raw": "{{baseUrl}}/api/orders", "host": ["{{baseUrl}}"], "path": ["api", "orders"] }
-          }
-        },
-        {
-          "name": "Create Order - Oversell (409)",
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"symbol\": \"AAPL\",\n  \"side\": \"SELL\",\n  \"quantity\": 99999\n}" },
-            "url": { "raw": "{{baseUrl}}/api/orders", "host": ["{{baseUrl}}"], "path": ["api", "orders"] }
-          }
-        },
-        {
-          "name": "Get Order - Not Found",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/orders/00000000-0000-0000-0000-000000000000",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "orders", "00000000-0000-0000-0000-000000000000"]
+          "name": "Product Types & Manual Investing",
+          "item": [
+            {
+              "name": "List Product Types",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const res = pm.response.json();",
+                      "if (res.length > 0) { pm.collectionVariables.set('productTypeId', res[0].id); }"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{portfolioUrl}}/product-types",
+                  "host": [
+                    "{{portfolioUrl}}"
+                  ],
+                  "path": [
+                    "product-types"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Add Fund to Product Type",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"amount\": 1000\n}"
+                },
+                "url": {
+                  "raw": "{{portfolioUrl}}/product-types/{{productTypeId}}/add-fund",
+                  "host": [
+                    "{{portfolioUrl}}"
+                  ],
+                  "path": [
+                    "product-types",
+                    "{{productTypeId}}",
+                    "add-fund"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Redeem Fund from Product Type",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"amount\": 500\n}"
+                },
+                "url": {
+                  "raw": "{{portfolioUrl}}/product-types/{{productTypeId}}/redeem",
+                  "host": [
+                    "{{portfolioUrl}}"
+                  ],
+                  "path": [
+                    "product-types",
+                    "{{productTypeId}}",
+                    "redeem"
+                  ]
+                }
+              }
             }
-          }
+          ]
         }
       ]
     }

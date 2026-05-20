@@ -21,6 +21,9 @@ import {
   ProductTypeRepository,
   AssociatedIndexFundRepository,
   SubscribedPortfolioRepository,
+  RiskProfileTemplateRepository,
+  QuizRepository,
+  AutoInvestPlanRepository,
 } from "./repository/index";
 
 import {
@@ -28,11 +31,15 @@ import {
   NavService,
   OrderService,
   ReconciliationService,
+  InvestmentPlanService,
+  QuizService,
 } from "./services/index";
 
 import { buildUserPortfolioRouter } from "./routes/user-portfolio.routes";
 import { buildOrdersRouter } from "./routes/orders.routes";
 import { buildProductTypeRouter } from "./routes/product-type.routes";
+import { buildQuizRouter } from "./routes/quiz.routes";
+import { buildInvestmentPlanRouter } from "./routes/investment-plan.routes";
 
 import { startOrderExecutionConsumer } from "./consumers/order-execution.consumer";
 import { startNavSnapshotConsumer } from "./consumers/nav-snapshot.consumer";
@@ -58,6 +65,9 @@ async function main() {
   const productTypeRepo = new ProductTypeRepository();
   const associatedIndexFundRepo = new AssociatedIndexFundRepository();
   const subscribedPortfolioRepo = new SubscribedPortfolioRepository();
+  const riskTemplateRepo = new RiskProfileTemplateRepository();
+  const quizRepo = new QuizRepository();
+  const autoInvestPlanRepo = new AutoInvestPlanRepository();
 
   const orderService = new OrderService(orderRepo, userPortfolioRepo, holdingRepo, publisher);
   const navService = new NavService(userPortfolioRepo, navRepo);
@@ -69,12 +79,19 @@ async function main() {
     userPortfolioRepo,
     orderService,
   );
+  const quizService = new QuizService(quizRepo);
+  const investmentPlanService = new InvestmentPlanService(
+    autoInvestPlanRepo,
+    productTypeRepo,
+    riskTemplateRepo,
+  );
 
   await startOrderExecutionConsumer(rabbit, orderService, inbox);
   await startNavSnapshotConsumer(rabbit, navService, inbox);
   await startReconciliationConsumer(rabbit, reconService, inbox);
 
   const app = express();
+  app.set("trust proxy", 1);
   app.use(helmet());
   app.use(cors());
   app.use(rateLimit({ windowMs: 60 * 1000, max: 200 }));
@@ -84,6 +101,8 @@ async function main() {
   app.use("/", buildUserPortfolioRouter(userPortfolioRepo, navService));
   app.use("/", buildOrdersRouter(orderService));
   app.use("/", buildProductTypeRouter(subscribedPortfolioService));
+  app.use("/", buildQuizRouter(quizService));
+  app.use("/", buildInvestmentPlanRouter(investmentPlanService));
   app.use(handleError);
 
   app.listen(config.port, () => logger.info({ port: config.port }, "portfolio-service listening"));

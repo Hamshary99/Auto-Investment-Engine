@@ -3,21 +3,22 @@ import dotenv from "dotenv";
 dotenv.config({ path: path.resolve(__dirname, "../../../.env"), override: true });
 dotenv.config({ path: path.resolve(__dirname, "../../../.env.local"), override: true });
 
-import express, { NextFunction, Request, Response } from "express";
+import express from "express";
 import helmet from "helmet";
 import cors from "cors";
-import rateLimit from "express-rate-limit";
-import { createProxyMiddleware } from "http-proxy-middleware";
 import { createLogger } from "@auto-invest/shared";
 import { config } from "./config";
+import { stripClientInternalHeaders, verifyUserJwt, injectInternalAuth } from "./auth";
 import {
-  injectInternalAuth,
-  stripClientInternalHeaders,
-  verifyUserJwt,
-} from "./auth";
+  globalLimiter,
+  authLimiter,
+  authProxy,
+  portfolioProxy,
+  authRoutingMiddleware,
+  errorHandler,
+} from "./middlewares";
 
 const log = createLogger("app-service");
-
 const app = express();
 
 if (config.trustProxy) app.set("trust proxy", 1);
@@ -45,57 +46,17 @@ app.use(
 );
 
 app.use(stripClientInternalHeaders);
-
-const globalLimiter = rateLimit({
-  windowMs: config.rateLimit.windowMs,
-  max: config.rateLimit.max,
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-
-const authLimiter = rateLimit({
-  windowMs: config.rateLimit.windowMs,
-  max: config.rateLimit.authMax,
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-
 app.use(globalLimiter);
 
 app.get("/health", (_req, res) => res.json({ ok: true }));
 
-const authProxy = createProxyMiddleware({
-  target: config.authUpstream,
-  changeOrigin: true,
-  pathRewrite: { "^/auth": "" },
-  xfwd: true,
-});
+app.use("/auth/login", authLimiter);
+app.use("/auth/register", authLimiter);
+app.use("/auth", authRoutingMiddleware, authProxy);
 
-const portfolioProxy = createProxyMiddleware({
-  target: config.portfolioUpstream,
-  changeOrigin: true,
-  pathRewrite: { "^/api": "" },
-  xfwd: true,
-});
-
-// Public auth endpoints (login/register) — rate-limited, no JWT required.
-app.use("/auth/login", authLimiter, authProxy);
-app.use("/auth/register", authLimiter, authProxy);
-
-// Protected auth endpoints (e.g. /me) — verify JWT, inject internal context.
-app.use("/auth", verifyUserJwt, injectInternalAuth, authProxy);
-
-// All portfolio/order routes — protected.
 app.use("/api", verifyUserJwt, injectInternalAuth, portfolioProxy);
 
 app.use((_req, res) => res.status(404).json({ error: "not_found" }));
-
-app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
-  if (err.message === "origin_not_allowed") {
-    return res.status(403).json({ error: "cors_origin_not_allowed" });
-  }
-  log.error({ err }, "app-service error");
-  res.status(500).json({ error: "internal_error" });
-});
+app.use(errorHandler);
 
 app.listen(config.port, () => log.info({ port: config.port }, "app-service listening"));

@@ -18,3 +18,5 @@ FUNDS_ADMIN_PLAN.md
 admin-seed/
 services/portfolio-service/DOMAIN_MODEL.md
 BUSINESS_*.md
+HOLDINGS_AND_API_FLOW.md
+services/portfolio-service/src/models/*.md
