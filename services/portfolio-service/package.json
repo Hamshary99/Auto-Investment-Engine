@@ -6,8 +6,20 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
     "dev": "ts-node-dev --respawn src/index.ts",
-    "test": "jest",
-    "test:watch": "jest --watch"
+
+    "test": "jest --no-coverage",
+    "test:watch": "jest --watch",
+    "test:all": "jest --no-coverage --verbose",
+
+    "test:quiz": "jest --no-coverage --verbose --testPathPattern=\"tests/quiz\\.service\\.test\"",
+    "test:investment-plan": "jest --no-coverage --verbose --testPathPattern=\"tests/investment-plan\\.service\\.test\"",
+    "test:order": "jest --no-coverage --verbose --testPathPattern=\"tests/order\\.service\\.test\"",
+    "test:nav": "jest --no-coverage --verbose --testPathPattern=\"tests/nav\\.service\\.test\"",
+    "test:reconciliation": "jest --no-coverage --verbose --testPathPattern=\"tests/reconciliation\\.service\\.test\"",
+    "test:subscribed-portfolio": "jest --no-coverage --verbose --testPathPattern=\"tests/subscribed-portfolio\\.service\\.test\"",
+    "test:consumers": "jest --no-coverage --verbose --testPathPattern=\"tests/consumers/\"",
+
+    "test:new": "jest --no-coverage --verbose --testPathPattern=\"tests/(quiz|investment-plan)\\.service\\.test\""
   },
   "dependencies": {
     "@auto-invest/shared": "file:../../shared",
