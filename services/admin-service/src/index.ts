@@ -54,11 +54,11 @@ async function main() {
 
   app.get("/health", (_req, res) => res.json({ ok: true, service: "admin-service" }));
 
-  // Register Routes under /admin prefix
-  app.use("/admin", buildAuthRouter(authController));
-  app.use("/admin", buildProductTypeRouter(productTypeController));
-  app.use("/admin", buildRiskProfileTemplateRouter(riskProfileTemplateController));
-  app.use("/admin", buildQuizRouter(quizController));
+  // Register Routes
+  app.use("/", buildAuthRouter(authController));
+  app.use("/", buildProductTypeRouter(productTypeController));
+  app.use("/", buildRiskProfileTemplateRouter(riskProfileTemplateController));
+  app.use("/", buildQuizRouter(quizController));
 
   app.listen(config.port, () => console.log(`admin-service listening on port ${config.port}`));
 }
