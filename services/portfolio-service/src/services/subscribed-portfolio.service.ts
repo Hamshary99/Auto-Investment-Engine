@@ -8,6 +8,7 @@ import { Decimal } from "decimal.js";
 import { Order, OrderSide, ProductType } from "../models/index";
 import { getStubPrice } from "./price.stub";
 import { OrderService } from "./order.service";
+import { ApiError } from "../utils/error.handler";
 
 /**
  * Subscribed-portfolio operations (Madkhol: subscribe, addMoreFund, redeem).
@@ -27,7 +28,7 @@ export class SubscribedPortfolioService {
 
   async getActiveProductTypeOrThrow(id: string): Promise<ProductType> {
     const pt = await this.productTypes.findByIdActive(id, true);
-    if (!pt) throw new Error("product type not found or inactive");
+    if (!pt) throw new ApiError("product type not found or inactive", 404);
     return pt;
   }
 

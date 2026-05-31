@@ -1,0 +1,629 @@
+{
+  "info": {
+    "name": "Portfolio Service – Integration",
+    "_postman_id": "portfolio-integration-v2",
+    "description": "Full integration suite for portfolio-service. Run with newman against a live service instance.\nCovers: health, user-portfolio, NAV, orders, product-types, quiz, investment-plans.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3002"
+    },
+    {
+      "key": "jwtToken",
+      "value": ""
+    },
+    {
+      "key": "orderId",
+      "value": ""
+    },
+    {
+      "key": "planId",
+      "value": ""
+    },
+    {
+      "key": "productTypeId",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "🟢 Health",
+      "item": [
+        {
+          "name": "GET /health → 200 ok",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('ok=true',    () => pm.expect(pm.response.json().ok).to.be.true);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/health"
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔐 Auth guard",
+      "item": [
+        {
+          "name": "GET /user-portfolio – no token → 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('401 without token', () => pm.response.to.have.status(401));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/user-portfolio"
+          }
+        }
+      ]
+    },
+    {
+      "name": "User Portfolio",
+      "item": [
+        {
+          "name": "GET /user-portfolio → 200 (auto-created)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json();",
+                  "pm.test('has cashBalance', () => pm.expect(b).to.have.property('cashBalance'));",
+                  "pm.test('has holdings[]', () => pm.expect(b.holdings).to.be.an('array'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/user-portfolio",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtToken}}"
+              }
+            ]
+          }
+        },
+        {
+          "name": "GET /nav → 200 or null",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/nav",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtToken}}"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Orders",
+      "item": [
+        {
+          "name": "POST /orders – BUY AAPL → 201 PENDING",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('status 202', () => pm.response.to.have.status(202));",
+                  "const b = pm.response.json();",
+                  "pm.test('status=PENDING', () => pm.expect(b.status).to.eql('PENDING'));",
+                  "pm.test('symbol uppercased', () => pm.expect(b.symbol).to.eql('AAPL'));",
+                  "pm.test('side=BUY', () => pm.expect(b.side).to.eql('BUY'));",
+                  "pm.collectionVariables.set('orderId', b.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/orders",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"symbol\": \"aapl\", \"side\": \"BUY\", \"quantity\": 5 }"
+            }
+          }
+        },
+        {
+          "name": "GET /orders/:id → 200 same order",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json();",
+                  "pm.test('id matches', () => pm.expect(b.id).to.eql(pm.collectionVariables.get('orderId')));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/orders/{{orderId}}",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtToken}}"
+              }
+            ]
+          }
+        },
+        {
+          "name": "POST /orders – invalid body → 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('status 400 on bad body', () => pm.response.to.have.status(400));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/orders",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"symbol\": \"AAPL\", \"side\": \"HOLD\", \"quantity\": -1 }"
+            }
+          }
+        },
+        {
+          "name": "GET /orders/unknown-id → 404",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/orders/00000000-0000-0000-0000-000000000000",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtToken}}"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Product Types",
+      "item": [
+        {
+          "name": "GET /product-types → 200 array",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('is array', () => pm.expect(pm.response.json()).to.be.an('array'));",
+                  "const types = pm.response.json();",
+                  "if (types.length > 0) {",
+                  "  pm.collectionVariables.set('productTypeId', types[0].id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/product-types",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtToken}}"
+              }
+            ]
+          }
+        },
+        {
+          "name": "GET /product-types/:id → 200 (if seeded)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const id = pm.collectionVariables.get('productTypeId');",
+                  "if (id) {",
+                  "  pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "  pm.test('has id', () => pm.expect(pm.response.json().id).to.eql(id));",
+                  "} else {",
+                  "  pm.test.skip('no product type seeded – skipping');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/product-types/{{productTypeId}}",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtToken}}"
+              }
+            ]
+          }
+        },
+        {
+          "name": "GET /product-types/unknown-id → 404",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/product-types/00000000-0000-0000-0000-000000000000",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtToken}}"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Quiz",
+      "item": [
+        {
+          "name": "GET /quiz → 200 questions array",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('is array', () => pm.expect(pm.response.json()).to.be.an('array'));",
+                  "const qs = pm.response.json();",
+                  "if (qs.length > 0 && qs[0].answers && qs[0].answers.length > 0) {",
+                  "  // Build a valid submission from the first answer of each question",
+                  "  const submission = qs.map(q => ({",
+                  "    questionId: q.id,",
+                  "    answerId: q.answers[0].id",
+                  "  }));",
+                  "  pm.collectionVariables.set('quizSubmission', JSON.stringify(submission));",
+                  "} else {",
+                  "  pm.collectionVariables.set('quizSubmission', '[]');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/quiz",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtToken}}"
+              }
+            ]
+          }
+        },
+        {
+          "name": "POST /quiz/submit → 200 { totalScore, riskProfile }",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "const sub = pm.collectionVariables.get('quizSubmission') || '[]';",
+                  "pm.variables.set('submissionBody', sub);"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const sub = JSON.parse(pm.collectionVariables.get('quizSubmission') || '[]');",
+                  "if (sub.length === 0) { pm.test.skip('no quiz data seeded'); return; }",
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json();",
+                  "pm.test('has totalScore', () => pm.expect(b).to.have.property('totalScore'));",
+                  "pm.test('riskProfile is valid', () => pm.expect(['conservative','moderate','aggressive']).to.include(b.riskProfile));",
+                  "pm.collectionVariables.set('quizRiskProfile', b.riskProfile);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/quiz/submit",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{{submissionBody}}"
+            }
+          }
+        },
+        {
+          "name": "POST /quiz/submit – empty body → 500 or 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('rejects empty submission', () => pm.expect(pm.response.code).to.be.oneOf([400, 500]));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/quiz/submit",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "[]"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Investment Plans",
+      "item": [
+        {
+          "name": "GET /plan → 200 empty list (fresh user)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('is array', () => pm.expect(pm.response.json()).to.be.an('array'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/plan",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtToken}}"
+              }
+            ]
+          }
+        },
+        {
+          "name": "POST /plan/from-quiz → 201 new plan (if quiz was run)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "const rp = pm.collectionVariables.get('quizRiskProfile') || 'moderate';",
+                  "pm.variables.set('planBody', JSON.stringify({ riskProfile: rp, reservePct: 0.05, autoInvest: true }));"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('status 201 or 400', () => pm.expect(pm.response.code).to.be.oneOf([201, 400]));",
+                  "if (pm.response.code === 201) {",
+                  "  const b = pm.response.json();",
+                  "  pm.test('has id', () => pm.expect(b).to.have.property('id'));",
+                  "  pm.test('has riskProfile', () => pm.expect(b).to.have.property('riskProfile'));",
+                  "  pm.collectionVariables.set('planId', b.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/plan/from-quiz",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{{planBody}}"
+            }
+          }
+        },
+        {
+          "name": "GET /plan/:id → 200 (if plan was created)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const id = pm.collectionVariables.get('planId');",
+                  "if (!id) { pm.test.skip('no plan created yet'); return; }",
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('id matches', () => pm.expect(pm.response.json().id).to.eql(id));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/plan/{{planId}}",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtToken}}"
+              }
+            ]
+          }
+        },
+        {
+          "name": "GET /plan/unknown-id → 404",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/plan/00000000-0000-0000-0000-000000000000",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtToken}}"
+              }
+            ]
+          }
+        },
+        {
+          "name": "POST /plan/from-quiz – invalid riskProfile → 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('status 400 on bad riskProfile', () => pm.response.to.have.status(400));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/plan/from-quiz",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"riskProfile\": \"YOLO\" }"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

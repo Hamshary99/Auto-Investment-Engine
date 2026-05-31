@@ -6,11 +6,9 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
     "dev": "ts-node-dev --respawn src/index.ts",
-
     "test": "jest --no-coverage",
     "test:watch": "jest --watch",
     "test:all": "jest --no-coverage --verbose",
-
     "test:quiz": "jest --no-coverage --verbose --testPathPattern=\"tests/quiz\\.service\\.test\"",
     "test:investment-plan": "jest --no-coverage --verbose --testPathPattern=\"tests/investment-plan\\.service\\.test\"",
     "test:order": "jest --no-coverage --verbose --testPathPattern=\"tests/order\\.service\\.test\"",
@@ -18,8 +16,12 @@
     "test:reconciliation": "jest --no-coverage --verbose --testPathPattern=\"tests/reconciliation\\.service\\.test\"",
     "test:subscribed-portfolio": "jest --no-coverage --verbose --testPathPattern=\"tests/subscribed-portfolio\\.service\\.test\"",
     "test:consumers": "jest --no-coverage --verbose --testPathPattern=\"tests/consumers/\"",
+    "test:new": "jest --no-coverage --verbose --testPathPattern=\"tests/(quiz|investment-plan)\\.service\\.test\"",
 
-    "test:new": "jest --no-coverage --verbose --testPathPattern=\"tests/(quiz|investment-plan)\\.service\\.test\""
+    "integration": "newman run postman/portfolio.integration.collection.json --environment postman/local.environment.json --color on",
+    "integration:ci": "newman run postman/portfolio.integration.collection.json --env-var baseUrl=http://localhost:3002 --env-var jwtToken=%CI_JWT% --reporters cli,junit --reporter-junit-export newman-results.xml",
+
+    "token": "node scripts/gen-token.js"
   },
   "dependencies": {
     "@auto-invest/shared": "file:../../shared",
@@ -47,6 +49,7 @@
     "@types/node": "^22.9.0",
     "@types/uuid": "^10.0.0",
     "jest": "^29.7.0",
+    "newman": "^6.2.2",
     "ts-jest": "^29.2.5",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.6.3"

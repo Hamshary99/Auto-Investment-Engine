@@ -1,0 +1,10 @@
+{
+  "id": "portfolio-local-env",
+  "name": "Portfolio Service – Local",
+  "values": [
+    { "key": "baseUrl",   "value": "http://localhost:3002", "enabled": true },
+    { "key": "jwtToken",  "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhYWFhYWFhYS1hYWFhLWFhYWEtYWFhYS1hYWFhYWFhYWFhYWEiLCJlbWFpbCI6ImRldkBhdXRvLWludmVzdC5sb2NhbCIsImlhdCI6MTc3OTY1NDA3OCwiZXhwIjoxNzc5NjgyODc4fQ.h90idZHNuMQa--PIbSaKYw6f4G8zwYWhzp56_YKxV9Q", "enabled": true,
+      "description": "Paste a valid JWT from auth-service here, or generate one with: npm run test:integration:token" }
+  ],
+  "_postman_variable_scope": "environment"
+}
