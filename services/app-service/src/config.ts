@@ -5,6 +5,8 @@ export const config = {
   internalTokenTtlMs: parseInt(process.env.INTERNAL_AUTH_TTL_MS || "30000", 10),
   authUpstream: process.env.AUTH_UPSTREAM || "http://auth-service:3001",
   portfolioUpstream: process.env.PORTFOLIO_UPSTREAM || "http://portfolio-service:3002",
+  adminUpstream: process.env.ADMIN_UPSTREAM || "http://admin-service:3004",
+  adminJwtSecret: process.env.ADMIN_JWT_SECRET || "admin-dev-secret",
   corsOrigins: (process.env.CORS_ORIGINS || "http://localhost:3000,http://localhost:5173")
     .split(",")
     .map((s) => s.trim())

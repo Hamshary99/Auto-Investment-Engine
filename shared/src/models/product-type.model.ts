@@ -16,7 +16,7 @@ export { RiskProfile };
  * Admin-defined. Users subscribe via SubscribedPortfolio and add fund over time.
  * Underlying symbol weights live in AssociatedIndexFund rows.
  */
-@Entity({ name: "product_types", schema: "portfolio" })
+@Entity({ name: "product_types", schema: "catalog" })
 export class ProductType {
   @PrimaryGeneratedColumn("uuid")
   id!: string;

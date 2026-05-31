@@ -14,7 +14,9 @@ import {
   authLimiter,
   authProxy,
   portfolioProxy,
+  adminProxy,
   authRoutingMiddleware,
+  adminRoutingMiddleware,
   errorHandler,
 } from "./middlewares";
 
@@ -53,6 +55,10 @@ app.get("/health", (_req, res) => res.json({ ok: true }));
 app.use("/auth/login", authLimiter);
 app.use("/auth/register", authLimiter);
 app.use("/auth", authRoutingMiddleware, authProxy);
+
+app.use("/admin/auth/login", authLimiter);
+app.use("/admin/auth/register", authLimiter);
+app.use("/admin", adminRoutingMiddleware, adminProxy);
 
 app.use("/api", verifyUserJwt, injectInternalAuth, portfolioProxy);
 

@@ -4,3 +4,5 @@ export * from "./events/types";
 export * from "./rabbitmq/connection";
 export * from "./rabbitmq/publisher";
 export * from "./rabbitmq/consumer";
+
+export * from "./models";

@@ -2,7 +2,7 @@ import rateLimit from "express-rate-limit";
 import { createProxyMiddleware } from "http-proxy-middleware";
 import { NextFunction, Request, Response } from "express";
 import { config } from "./config";
-import { verifyUserJwt, injectInternalAuth } from "./auth";
+import { verifyUserJwt, injectInternalAuth, verifyAdminJwt } from "./auth";
 import { createLogger } from "@auto-invest/shared";
 
 const log = createLogger("app-service");
@@ -46,6 +46,19 @@ export const authRoutingMiddleware = (req: Request, res: Response, next: NextFun
     if (err) return next(err);
     injectInternalAuth(req, res, next);
   });
+};
+
+export const adminProxy = createProxyMiddleware({
+  target: config.adminUpstream,
+  changeOrigin: true,
+  xfwd: true,
+});
+
+export const adminRoutingMiddleware = (req: Request, res: Response, next: NextFunction) => {
+  if (req.path === "/auth/login" || req.path === "/auth/register") {
+    return next();
+  }
+  verifyAdminJwt(req as any, res, next);
 };
 
 export const errorHandler = (err: Error, _req: Request, res: Response, _next: NextFunction) => {

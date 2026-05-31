@@ -6,6 +6,8 @@ import { signInternalToken } from "./internal-token";
 export interface AppRequest extends Request {
   userId?: string;
   email?: string;
+  adminId?: string;
+  adminRole?: string;
 }
 
 export function verifyUserJwt(req: AppRequest, res: Response, next: NextFunction) {
@@ -21,6 +23,23 @@ export function verifyUserJwt(req: AppRequest, res: Response, next: NextFunction
     next();
   } catch {
     return res.status(401).json({ error: "invalid_token" });
+  }
+}
+
+export function verifyAdminJwt(req: AppRequest, res: Response, next: NextFunction) {
+  const header = req.header("authorization") || "";
+  const [scheme, token] = header.split(" ");
+  if (scheme !== "Bearer" || !token) {
+    return res.status(401).json({ error: "missing_bearer_token" });
+  }
+  try {
+    // Matches AdminJwtPayload from admin-service
+    const decoded = jwt.verify(token, config.adminJwtSecret) as { adminId: string; role: string };
+    req.adminId = decoded.adminId;
+    req.adminRole = decoded.role;
+    next();
+  } catch {
+    return res.status(401).json({ error: "invalid_admin_token" });
   }
 }
 

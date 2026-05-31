@@ -1,21 +1,14 @@
 import "reflect-metadata";
 import { DataSource } from "typeorm";
 import { config } from "./config";
+import { AdminUser } from "./models/admin-user.model";
 import {
-  UserPortfolio,
-  Holding,
-  Order,
-  NavSnapshot,
-  ProcessedMessage,
   ProductType,
   AssociatedIndexFund,
-  SubscribedPortfolio,
   RiskProfileTemplate,
   QuizQuestion,
   QuizAnswer,
-  AutoInvestPlan,
-  AutoInvestAllocation,
-} from "./models/index";
+} from "@auto-invest/shared";
 
 export const AppDataSource = new DataSource({
   type: "postgres",
@@ -25,20 +18,13 @@ export const AppDataSource = new DataSource({
   password: config.db.password,
   database: config.db.database,
   entities: [
-    UserPortfolio,
-    Holding,
-    Order,
-    NavSnapshot,
-    ProcessedMessage,
+    AdminUser,
     ProductType,
     AssociatedIndexFund,
-    SubscribedPortfolio,
     RiskProfileTemplate,
     QuizQuestion,
     QuizAnswer,
-    AutoInvestPlan,
-    AutoInvestAllocation,
   ],
-  synchronize: true,
+  synchronize: true, // Should be managed carefully in production
   logging: false,
 });

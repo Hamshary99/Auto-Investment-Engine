@@ -15,7 +15,7 @@ import { RiskProfile } from "./types";
  * RiskProfileTemplate = admin-defined allocation of product types for a risk band.
  * This is the catalog-level source for creating per-user auto-invest plans.
  */
-@Entity({ name: "risk_profile_templates", schema: "portfolio" })
+@Entity({ name: "risk_profile_templates", schema: "catalog" })
 @Unique(["riskProfile", "productType"])
 export class RiskProfileTemplate {
   @PrimaryGeneratedColumn("uuid")

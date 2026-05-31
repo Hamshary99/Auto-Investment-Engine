@@ -11,7 +11,7 @@ import { QuizAnswer } from "./quiz-answer.model";
 /**
  * QuizQuestion = active or inactive risk survey questions for quiz-based plan creation.
  */
-@Entity({ name: "quiz_questions", schema: "portfolio" })
+@Entity({ name: "quiz_questions", schema: "catalog" })
 export class QuizQuestion {
   @PrimaryGeneratedColumn("uuid")
   id!: string;

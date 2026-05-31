@@ -11,7 +11,7 @@ import { ProductType } from "./index";
  * AssociatedIndexFund = target weight of one index fund / symbol inside a ProductType
  * (Madkhol: portfolio / product-type ↔ index_fund association at catalog level).
  */
-@Entity({ name: "associated_index_funds", schema: "portfolio" })
+@Entity({ name: "associated_index_funds", schema: "catalog" })
 @Unique(["productType", "symbol"])
 export class AssociatedIndexFund {
   @PrimaryGeneratedColumn("uuid")

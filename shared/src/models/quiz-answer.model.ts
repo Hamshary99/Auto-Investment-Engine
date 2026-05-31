@@ -11,7 +11,7 @@ import { QuizQuestion } from "./quiz-question.model";
 /**
  * QuizAnswer = answer option for a quiz question, including score used to derive risk profile.
  */
-@Entity({ name: "quiz_answers", schema: "portfolio" })
+@Entity({ name: "quiz_answers", schema: "catalog" })
 export class QuizAnswer {
   @PrimaryGeneratedColumn("uuid")
   id!: string;

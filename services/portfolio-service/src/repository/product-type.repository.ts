@@ -1,7 +1,7 @@
 import { EntityManager, In, Repository } from "typeorm";
 import { AppDataSource } from "../data-source";
 import { ProductType } from "../models/index";
-import { RiskProfile } from "../models/product-type.model";
+import { RiskProfile } from "../models/types";
 
 export class ProductTypeRepository {
   private repo(tx?: EntityManager): Repository<ProductType> {

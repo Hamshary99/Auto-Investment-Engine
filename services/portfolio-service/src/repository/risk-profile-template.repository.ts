@@ -1,7 +1,7 @@
 import { EntityManager, Repository } from "typeorm";
 import { AppDataSource } from "../data-source";
 import { RiskProfile } from "../models/types";
-import { RiskProfileTemplate } from "../models/risk-profile-template.model";
+import { RiskProfileTemplate } from "../models/index";
 
 export class RiskProfileTemplateRepository {
   private repo(tx?: EntityManager): Repository<RiskProfileTemplate> {

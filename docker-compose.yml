@@ -74,11 +74,24 @@ services:
     environment:
       AUTH_UPSTREAM: http://auth-service:3001
       PORTFOLIO_UPSTREAM: http://portfolio-service:3002
+      ADMIN_UPSTREAM: http://admin-service:3004
     ports:
       - "${APP_PORT:-8080}:3000"
     depends_on:
       - auth-service
       - portfolio-service
+      - admin-service
+
+  admin-service:
+    build:
+      context: .
+      dockerfile: services/admin-service/Dockerfile
+    env_file: .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    expose:
+      - "3004"
 
 volumes:
   pgdata:
