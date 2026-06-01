@@ -1,9 +1,8 @@
 import {
-  ProductTypeRepository,
-  AssociatedIndexFundRepository,
   SubscribedPortfolioRepository,
   UserPortfolioRepository,
 } from "../repository/index";
+import { ProductTypeRepository, AssociatedIndexFundRepository } from "@auto-invest/shared";
 import { Decimal } from "decimal.js";
 import { Order, OrderSide, ProductType } from "../models/index";
 import { getStubPrice } from "./price.stub";

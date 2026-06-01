@@ -18,13 +18,16 @@ import {
   OrderRepository,
   NavSnapshotRepository,
   ProcessedMessageRepository,
-  ProductTypeRepository,
-  AssociatedIndexFundRepository,
   SubscribedPortfolioRepository,
-  RiskProfileTemplateRepository,
-  QuizRepository,
   AutoInvestPlanRepository,
 } from "./repository/index";
+
+import {
+  ProductTypeRepository,
+  AssociatedIndexFundRepository,
+  RiskProfileTemplateRepository,
+  QuizRepository,
+} from "@auto-invest/shared";
 
 import {
   SubscribedPortfolioService,
@@ -62,11 +65,11 @@ async function main() {
   const holdingRepo = new HoldingRepository();
   const navRepo = new NavSnapshotRepository();
   const inbox = new ProcessedMessageRepository();
-  const productTypeRepo = new ProductTypeRepository();
-  const associatedIndexFundRepo = new AssociatedIndexFundRepository();
+  const productTypeRepo = new ProductTypeRepository(AppDataSource as any);
+  const associatedIndexFundRepo = new AssociatedIndexFundRepository(AppDataSource as any);
   const subscribedPortfolioRepo = new SubscribedPortfolioRepository();
-  const riskTemplateRepo = new RiskProfileTemplateRepository();
-  const quizRepo = new QuizRepository();
+  const riskTemplateRepo = new RiskProfileTemplateRepository(AppDataSource as any);
+  const quizRepo = new QuizRepository(AppDataSource as any);
   const autoInvestPlanRepo = new AutoInvestPlanRepository();
 
   const orderService = new OrderService(orderRepo, userPortfolioRepo, holdingRepo, publisher);

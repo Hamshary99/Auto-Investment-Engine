@@ -1,6 +1,6 @@
 import { EntityManager } from "typeorm";
-import { QuizRepository } from "../repository";
-import { QuizQuestion, RiskProfile } from "../models/index";
+import { QuizRepository, QuizQuestion } from "@auto-invest/shared";
+import { RiskProfile } from "../models/index";
 
 export interface QuizSubmissionItem {
   questionId: string;
@@ -11,7 +11,7 @@ export class QuizService {
   constructor(private readonly quizRepo: QuizRepository) {}
 
   getActiveQuestions(tx?: EntityManager): Promise<QuizQuestion[]> {
-    return this.quizRepo.findActiveQuestions(tx);
+    return this.quizRepo.findActiveQuestions(tx as any);
   }
 
   async quizScore(
@@ -30,7 +30,7 @@ export class QuizService {
         throw new Error(`Duplicate answer for question ${questionId}`);
       }
 
-      const answer = await this.quizRepo.findAnswerById(answerId, tx);
+      const answer = await this.quizRepo.findAnswerById(answerId, tx as any);
       if (!answer) {
         throw new Error(`Answer not found: ${answerId}`);
       }
@@ -71,6 +71,6 @@ export class QuizService {
     question: QuizQuestion,
     tx?: EntityManager,
   ): Promise<QuizQuestion> {
-    return this.quizRepo.saveQuestion(question, tx);
+    return this.quizRepo.saveQuestion(question, tx as any);
   }
 }

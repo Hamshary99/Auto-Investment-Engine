@@ -1,11 +1,12 @@
-import { EntityManager, In, Repository } from "typeorm";
-import { AppDataSource } from "../data-source";
-import { ProductType } from "../models/index";
+import { DataSource, EntityManager, In, Repository } from "typeorm";
+import { ProductType } from "../models/product-type.model";
 import { RiskProfile } from "../models/types";
 
 export class ProductTypeRepository {
+  constructor(private dataSource: DataSource) {}
+
   private repo(tx?: EntityManager): Repository<ProductType> {
-    return tx ? tx.getRepository(ProductType) : AppDataSource.getRepository(ProductType);
+    return tx ? tx.getRepository(ProductType) : this.dataSource.getRepository(ProductType);
   }
 
   findByActive(tx?: EntityManager): Promise<ProductType[]> {

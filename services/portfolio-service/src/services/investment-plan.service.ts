@@ -3,11 +3,8 @@ import { AppDataSource } from "../data-source";
 import { AutoInvestPlan, AutoInvestAllocation, ProductType } from "../models/index";
 import { RiskProfile } from "../models/types";
 import { ApiError } from "../utils/error.handler";
-import {
-  AutoInvestPlanRepository,
-  ProductTypeRepository,
-  RiskProfileTemplateRepository,
-} from "../repository/index";
+import { AutoInvestPlanRepository } from "../repository/index";
+import { ProductTypeRepository, RiskProfileTemplateRepository } from "@auto-invest/shared";
 
 type AllocationInput = { productTypeId: string; weight: number };
 
@@ -80,7 +77,7 @@ export class InvestmentPlanService {
     return AppDataSource.transaction(async (tx) => {
       const templateRows = await this.riskTemplateRepo.findByRiskProfile(
         input.riskProfile,
-        tx,
+        tx as any,
       );
       if (templateRows.length === 0) {
         throw new ApiError(
@@ -285,7 +282,7 @@ export class InvestmentPlanService {
     tx: EntityManager,
   ): Promise<void> {
     const ids = allocations.map((a) => a.productTypeId);
-    const found = await this.productTypeRepo.findActiveByIds(ids, tx);
+    const found = await this.productTypeRepo.findActiveByIds(ids, tx as any);
     if (found.length !== ids.length) {
       const foundIds = new Set(found.map((p) => p.id));
       const missing = ids.filter((id) => !foundIds.has(id));

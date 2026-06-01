@@ -6,3 +6,4 @@ export * from "./rabbitmq/publisher";
 export * from "./rabbitmq/consumer";
 
 export * from "./models";
+export * from "./repository";

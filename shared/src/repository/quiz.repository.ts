@@ -1,21 +1,20 @@
-import { EntityManager, Repository } from "typeorm";
-import { AppDataSource } from "../data-source";
-import {
-  QuizQuestion,
-  QuizAnswer
- } from "../models/index";
+import { DataSource, EntityManager, Repository } from "typeorm";
+import { QuizQuestion } from "../models/quiz-question.model";
+import { QuizAnswer } from "../models/quiz-answer.model";
 
 export class QuizRepository {
+  constructor(private dataSource: DataSource) {}
+
   private questionRepo(tx?: EntityManager): Repository<QuizQuestion> {
     return tx
       ? tx.getRepository(QuizQuestion)
-      : AppDataSource.getRepository(QuizQuestion);
+      : this.dataSource.getRepository(QuizQuestion);
   }
 
   private answerRepo(tx?: EntityManager): Repository<QuizAnswer> {
     return tx
       ? tx.getRepository(QuizAnswer)
-      : AppDataSource.getRepository(QuizAnswer);
+      : this.dataSource.getRepository(QuizAnswer);
   }
 
   findActiveQuestions(tx?: EntityManager): Promise<QuizQuestion[]> {

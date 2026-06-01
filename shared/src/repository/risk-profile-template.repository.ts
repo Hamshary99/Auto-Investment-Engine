@@ -1,13 +1,14 @@
-import { EntityManager, Repository } from "typeorm";
-import { AppDataSource } from "../data-source";
+import { DataSource, EntityManager, Repository } from "typeorm";
 import { RiskProfile } from "../models/types";
-import { RiskProfileTemplate } from "../models/index";
+import { RiskProfileTemplate } from "../models/risk-profile-template.model";
 
 export class RiskProfileTemplateRepository {
+  constructor(private dataSource: DataSource) {}
+
   private repo(tx?: EntityManager): Repository<RiskProfileTemplate> {
     return tx
       ? tx.getRepository(RiskProfileTemplate)
-      : AppDataSource.getRepository(RiskProfileTemplate);
+      : this.dataSource.getRepository(RiskProfileTemplate);
   }
 
   findByRiskProfile(
