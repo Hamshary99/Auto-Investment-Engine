@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "commonjs",
+    "lib": ["ES2022"],
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "resolveJsonModule": true,
+    "paths": {
+      "@auto-invest/shared": ["../shared/src/index.ts"]
+    }
+  },
+  "include": ["./**/*", "../services/admin-service/src/**/*"],
+  "exclude": ["../node_modules", "../shared/node_modules"]
+}
+

@@ -1,13 +1,13 @@
 import "reflect-metadata";
-import { AppDataSource } from "../services/portfolio-service/src/data-source";
-import { RiskProfile } from "../services/portfolio-service/src/models/types";
+import { AppDataSource } from "../services/admin-service/src/data-source";
 import {
   AssociatedIndexFund,
   ProductType,
   QuizAnswer,
   QuizQuestion,
+  RiskProfile,
   RiskProfileTemplate,
-} from "../services/portfolio-service/src/models/index";
+} from "@auto-invest/shared";
 
 type SeedProductType = {
   name: string;
@@ -30,8 +30,7 @@ type SeedQuestion = {
 const seedProductTypes: SeedProductType[] = [
   {
     name: "Conservative Income",
-    description:
-      "Lower-risk portfolio targeting stable income and capital preservation.",
+    description: "Lower-risk portfolio targeting stable income and capital preservation.",
     riskProfile: RiskProfile.Conservative,
     funds: [
       { symbol: "BND", targetWeight: 0.6 },
@@ -41,8 +40,7 @@ const seedProductTypes: SeedProductType[] = [
   },
   {
     name: "Balanced Growth",
-    description:
-      "Moderate growth portfolio with diversified equity and fixed-income exposure.",
+    description: "Moderate growth portfolio with diversified equity and fixed-income exposure.",
     riskProfile: RiskProfile.Moderate,
     funds: [
       { symbol: "VTI", targetWeight: 0.5 },
@@ -150,9 +148,7 @@ async function seed() {
     const productTypes: Record<string, ProductType> = {};
 
     for (const seedType of seedProductTypes) {
-      let productType = await productTypeRepo.findOne({
-        where: { name: seedType.name },
-      });
+      let productType = await productTypeRepo.findOne({ where: { name: seedType.name } });
       if (!productType) {
         productType = productTypeRepo.create({
           name: seedType.name,
@@ -168,17 +164,10 @@ async function seed() {
 
       productTypes[seedType.name] = productType;
 
-      const existingIndexFunds = await indexFundRepo.find({
-        where: { productType: { id: productType.id } },
-      });
-      if (!existingIndexFunds.length) {
+      const existingFunds = await indexFundRepo.find({ where: { productType: { id: productType.id } } });
+      if (!existingFunds.length) {
         for (const fund of seedType.funds) {
-          const indexFund = indexFundRepo.create({
-            productType,
-            symbol: fund.symbol,
-            targetWeight: fund.targetWeight,
-          });
-          await indexFundRepo.save(indexFund);
+          await indexFundRepo.save(indexFundRepo.create({ productType, symbol: fund.symbol, targetWeight: fund.targetWeight }));
         }
       }
     }
@@ -189,50 +178,27 @@ async function seed() {
         if (!productType) continue;
 
         const existing = await templateRepo.findOne({
-          where: {
-            riskProfile: template.riskProfile,
-            productType: { id: productType.id },
-          },
+          where: { riskProfile: template.riskProfile, productType: { id: productType.id } },
         });
 
         if (!existing) {
-          const row = templateRepo.create({
-            riskProfile: template.riskProfile,
-            productType,
-            weight: allocation.weight,
-          });
-          await templateRepo.save(row);
-          console.log(
-            `Created template ${template.riskProfile} -> ${allocation.productTypeName}`,
-          );
+          await templateRepo.save(templateRepo.create({ riskProfile: template.riskProfile, productType, weight: allocation.weight }));
+          console.log(`Created template ${template.riskProfile} -> ${allocation.productTypeName}`);
         }
       }
     }
 
     for (const questionSeed of seedQuizQuestions) {
-      let question = await questionRepo.findOne({
-        where: { text: questionSeed.text },
-      });
+      let question = await questionRepo.findOne({ where: { text: questionSeed.text } });
       if (!question) {
-        question = questionRepo.create({
-          text: questionSeed.text,
-          displayOrder: questionSeed.displayOrder,
-          isActive: true,
-        });
+        question = questionRepo.create({ text: questionSeed.text, displayOrder: questionSeed.displayOrder, isActive: true });
         await questionRepo.save(question);
       }
 
-      const existingAnswers = await answerRepo.find({
-        where: { question: { id: question.id } },
-      });
+      const existingAnswers = await answerRepo.find({ where: { question: { id: question.id } } });
       if (!existingAnswers.length) {
         for (const answer of questionSeed.answers) {
-          const answerRow = answerRepo.create({
-            question,
-            text: answer.text,
-            score: answer.score,
-          });
-          await answerRepo.save(answerRow);
+          await answerRepo.save(answerRepo.create({ question, text: answer.text, score: answer.score }));
         }
       }
     }
@@ -245,8 +211,6 @@ async function seed() {
 seed().catch((error) => {
   console.error("Seed failed:", error);
   const proc = (globalThis as any).process;
-  if (proc?.exit) {
-    proc.exit(1);
-  }
+  if (proc?.exit) proc.exit(1);
   throw error;
 });

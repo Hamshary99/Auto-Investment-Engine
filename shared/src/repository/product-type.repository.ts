@@ -3,10 +3,14 @@ import { ProductType } from "../models/product-type.model";
 import { RiskProfile } from "../models/types";
 
 export class ProductTypeRepository {
-  constructor(private dataSource: DataSource) {}
+  constructor(private dataSource: DataSource) { }
 
   private repo(tx?: EntityManager): Repository<ProductType> {
     return tx ? tx.getRepository(ProductType) : this.dataSource.getRepository(ProductType);
+  }
+
+  findAll(tx?: EntityManager): Promise<ProductType[]> {
+    return this.repo(tx).find();
   }
 
   findByActive(tx?: EntityManager): Promise<ProductType[]> {
@@ -15,6 +19,11 @@ export class ProductTypeRepository {
       relations: { associatedIndexFunds: true },
       order: { name: "ASC" },
     });
+  }
+
+  findByNameForDuplicates(name: string, tx?: EntityManager): Promise<ProductType | null> {
+    name = name.trim().toLowerCase();
+    return this.repo(tx).findOne({ where: { name } });
   }
 
   findById(id: string, tx?: EntityManager): Promise<ProductType | null> {

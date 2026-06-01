@@ -17,11 +17,35 @@ export class QuizRepository {
       : this.dataSource.getRepository(QuizAnswer);
   }
 
+  findAllQuestions(tx?: EntityManager): Promise<QuizQuestion[]> {
+    return this.questionRepo(tx).find({
+      order: { displayOrder: "ASC" },
+    });
+  }
+
   findActiveQuestions(tx?: EntityManager): Promise<QuizQuestion[]> {
     return this.questionRepo(tx).find({
       where: { isActive: true },
       relations: { answers: true },
       order: { displayOrder: "ASC" },
+    });
+  }
+
+  findAnswersForQuestion(
+    questionId: string,
+    tx?: EntityManager,
+  ): Promise<QuizAnswer[]> {
+    return this.answerRepo(tx).find({
+      where: { question: { id: questionId } },
+    });
+  }
+
+  findQuestionById(
+    questionId: string,
+    tx?: EntityManager,
+  ): Promise<QuizQuestion | null> {
+    return this.questionRepo(tx).findOne({
+      where: { id: questionId },
     });
   }
 
@@ -42,7 +66,19 @@ export class QuizRepository {
     return this.questionRepo(tx).save(question);
   }
 
-  saveAnswer(answer: QuizAnswer, tx?: EntityManager): Promise<QuizAnswer> {
+  saveAnswers(answer: QuizAnswer[], tx?: EntityManager): Promise<QuizAnswer[]> {
     return this.answerRepo(tx).save(answer);
+  }
+
+  async deleteQuestion(questionId: string, tx?: EntityManager): Promise<void> {
+    await this.questionRepo(tx).delete(questionId);
+  }
+
+  async deleteAnswer(answerId: string, tx?: EntityManager): Promise<void> {
+    await this.answerRepo(tx).delete(answerId);
+  }
+
+  async inactivateQuestion(questionId: string, tx?: EntityManager): Promise<void> {
+    await this.questionRepo(tx).update(questionId, { isActive: false });
   }
 }

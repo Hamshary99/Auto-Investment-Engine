@@ -11,7 +11,7 @@ export function buildProductTypeRouter(productTypeController: ProductTypeControl
   router.post("/product-types", productTypeController.createProductType);
   router.put("/product-types/:id", productTypeController.updateProductType);
   router.patch("/product-types/:id/deactivate", productTypeController.deactivateProductType);
-  router.put("/product-types/:id/associated-index-funds", productTypeController.updateAssociatedIndexFunds);
+  // router.put("/product-types/:id/associated-index-funds", productTypeController.updateAssociatedIndexFunds);
 
   return router;
 }

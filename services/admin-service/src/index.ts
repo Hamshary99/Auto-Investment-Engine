@@ -13,12 +13,21 @@ import { AppDataSource } from "./data-source";
 import { config } from "./config";
 
 import { AdminUserRepository } from "./repository/admin-user.repository";
+import {
+  ProductTypeRepository,
+  AssociatedIndexFundRepository,
+  RiskProfileTemplateRepository,
+  QuizRepository,
+} from "@auto-invest/shared";
 
 // Import Controllers and Services (Stubs)
 import { AuthService, AuthController } from "./controllers/auth.controller";
-import { ProductTypeService, ProductTypeController } from "./controllers/product-type.controller";
-import { RiskProfileTemplateService, RiskProfileTemplateController } from "./controllers/risk-profile-template.controller";
-import { QuizService, QuizController } from "./controllers/quiz.controller";
+import { ProductTypeController } from "./controllers/product-type.controller";
+import { RiskProfileTemplateController } from "./controllers/risk-profile-template.controller";
+import { QuizController } from "./controllers/quiz.controller";
+import { ProductTypeService } from "./services/product-type.service";
+import { RiskProfileTemplateService } from "./services/risk-profile-template.service";
+import { QuizService } from "./services/quiz.service";
 
 // Import Routers
 import { buildAuthRouter } from "./routes/auth.routes";
@@ -32,12 +41,16 @@ async function main() {
 
   // Initialize Repositories
   const adminUserRepo = new AdminUserRepository();
+  const productTypeRepo = new ProductTypeRepository(AppDataSource);
+  const associatedIndexFundRepo = new AssociatedIndexFundRepository(AppDataSource);
+  const riskProfileTemplateRepo = new RiskProfileTemplateRepository(AppDataSource);
+  const quizRepo = new QuizRepository(AppDataSource);
 
   // Initialize Services
   const authService = new AuthService(adminUserRepo);
-  const productTypeService = new ProductTypeService();
-  const riskProfileTemplateService = new RiskProfileTemplateService();
-  const quizService = new QuizService();
+  const productTypeService = new ProductTypeService(productTypeRepo, associatedIndexFundRepo);
+  const riskProfileTemplateService = new RiskProfileTemplateService(riskProfileTemplateRepo, productTypeRepo, AppDataSource);
+  const quizService = new QuizService(quizRepo);
 
   // Initialize Controllers
   const authController = new AuthController(authService);

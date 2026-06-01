@@ -13,7 +13,7 @@
     "install:scheduler": "npm --prefix services/scheduler-service install",
     "install:app": "npm --prefix services/app-service install",
     "install:admin": "npm --prefix services/admin-service install",
-    "seed": "npx ts-node --project services/portfolio-service/tsconfig.json scripts/seed-dev.ts",
+    "seed": "npx ts-node --project scripts/tsconfig.json scripts/seed-dev.ts",
     "build:all": "npm run build:shared && npm run build:auth && npm run build:portfolio && npm run build:scheduler && npm run build:app && npm run build:admin",
     "build:shared": "npm --prefix shared run build",
     "build:auth": "npm --prefix services/auth-service run build",
