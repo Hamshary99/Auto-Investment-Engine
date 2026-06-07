@@ -9,9 +9,7 @@ import { getStubPrice } from "./price.stub";
 import { OrderService } from "./order.service";
 import { ApiError } from "../utils/error.handler";
 
-/**
- * Subscribed-portfolio operations (Madkhol: subscribe, addMoreFund, redeem).
- */
+
 export class SubscribedPortfolioService {
   constructor(
     private readonly productTypes: ProductTypeRepository,
@@ -34,13 +32,13 @@ export class SubscribedPortfolioService {
   /**
    * addMoreFund — deploy `amount` from user cash into a product type's index-fund mix.
    */
-  async addFund(userId: string, productTypeId: string, amount: number): Promise<Order[]> {
+  async addFund(userId: string, productTypeId: string, amount: number, reservePct: number = 0.01): Promise<Order[]> {
     await this.getActiveProductTypeOrThrow(productTypeId);
 
     const mix = await this.associatedIndexFunds.findByProductTypeId(productTypeId);
     if (!mix.length) throw new Error("product type has no associated index funds");
 
-    const total = new Decimal(amount);
+    const total = new Decimal(amount * (1 - reservePct));
     const orders: Order[] = [];
 
     for (const row of mix) {
