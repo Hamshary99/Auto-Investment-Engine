@@ -3,8 +3,9 @@ import { AppDataSource } from "../data-source";
 import { AutoInvestPlan, AutoInvestAllocation, ProductType } from "../models/index";
 import { RiskProfile } from "../models/types";
 import { ApiError } from "../utils/error.handler";
-import { AutoInvestPlanRepository } from "../repository/index";
+import { AutoInvestPlanRepository, UserPortfolioRepository } from "../repository/index";
 import { ProductTypeRepository, RiskProfileTemplateRepository } from "@auto-invest/shared";
+import { Decimal } from "decimal.js";
 
 type AllocationInput = { productTypeId: string; weight: number };
 
@@ -15,6 +16,7 @@ export class InvestmentPlanService {
     private planRepo: AutoInvestPlanRepository,
     private productTypeRepo: ProductTypeRepository,
     private riskTemplateRepo: RiskProfileTemplateRepository,
+    private userPortfolioRepo: UserPortfolioRepository,
   ) {}
 
   listPlansByUserId(userId: string): Promise<AutoInvestPlan[]> {
@@ -173,6 +175,32 @@ export class InvestmentPlanService {
   // ): Promise<void> {
     
   // }
+
+  async fundPlan(planId: string, userId: string, amount: number): Promise<AutoInvestPlan> {
+    if (!Number.isFinite(amount) || amount <= 0) {
+      throw new ApiError("Amount must be positive", 400, "invalid_input");
+    }
+
+    return AppDataSource.transaction(async (tx) => {
+      const plan = await this.loadOwnedPlan(planId, userId, tx);
+      const userPortfolio = await this.userPortfolioRepo.findByUserId(userId, tx);
+      if (!userPortfolio) {
+        throw new ApiError("User portfolio not found", 404, "not_found");
+      }
+
+      if (new Decimal(amount).gt(new Decimal(userPortfolio.cashBalance))) {
+        throw new ApiError("Insufficient funds in user portfolio", 400, "validation_error");
+      }
+
+      userPortfolio.cashBalance = new Decimal(userPortfolio.cashBalance).minus(amount).toFixed(2);
+      await this.userPortfolioRepo.save(userPortfolio, tx);
+
+      plan.cashBalance = new Decimal(plan.cashBalance).plus(amount).toFixed(2);
+      await this.planRepo.save(plan, tx);
+
+      return plan;
+    });
+  }
 
   async deletePlan(planId: string, userId: string): Promise<void> {
     await AppDataSource.transaction(async (tx) => {

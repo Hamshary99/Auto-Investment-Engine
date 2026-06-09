@@ -17,10 +17,13 @@ import { ProductType, UserPortfolio } from "./index";
  * Dollar flows only; share positions aggregate in Holding (no product attribution).
  */
 @Entity({ name: "subscribed_portfolios", schema: "portfolio" })
-@Unique(["userPortfolio", "productType"])
+@Unique(["userPortfolio", "productType", "planId"])
 export class SubscribedPortfolio {
   @PrimaryGeneratedColumn("uuid")
   id!: string;
+
+  @Column({ type: "uuid", nullable: true })
+  planId?: string | null;
 
   @Index()
   @ManyToOne(() => UserPortfolio, { onDelete: "CASCADE" })

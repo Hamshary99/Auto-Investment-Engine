@@ -11,6 +11,7 @@ import {
   UserPortfolioRepository,
   OrderRepository,
   HoldingRepository,
+  AutoInvestPlanRepository,
  } from "../repository/index";
 import { ApiError } from "../utils/error.handler";
 import {
@@ -32,11 +33,12 @@ export class OrderService {
     private readonly userPortfolios: UserPortfolioRepository,
     private readonly holdings: HoldingRepository,
     private readonly publisher: Publisher,
+    private readonly plans: AutoInvestPlanRepository,
   ) {}
 
   async placeOrder(
     userId: string,
-    input: { symbol: string; side: OrderSide; quantity: number },
+    input: { symbol: string; side: OrderSide; quantity: number; planId?: string },
   ) {
     const order = await AppDataSource.transaction(async (tx) => {
       await this.ensureUserPortfolio(tx, userId);
@@ -46,6 +48,7 @@ export class OrderService {
           symbol: input.symbol.toUpperCase(),
           side: input.side,
           quantity: String(input.quantity),
+          planId: input.planId,
           status: OrderStatus.PENDING,
         },
         tx,
@@ -85,11 +88,14 @@ export class OrderService {
 
     try {
       const userPortfolio = await this.ensureUserPortfolio(tx, order.userId);
+      const plan = order.planId ? await this.plans.findById(order.planId, tx) : null;
 
       if (order.side === OrderSide.BUY) {
         await this.settleBuy(
           tx,
           userPortfolio,
+          plan,
+          order.planId || null,
           order.symbol,
           order.quantity,
           fillPrice,
@@ -98,6 +104,8 @@ export class OrderService {
         await this.settleSell(
           tx,
           userPortfolio,
+          plan,
+          order.planId || null,
           order.symbol,
           order.quantity,
           fillPrice,
@@ -114,21 +122,28 @@ export class OrderService {
   private async settleBuy(
     tx: EntityManager,
     userPortfolio: UserPortfolio,
+    plan: any,
+    planId: string | null,
     symbol: string,
     qty: string,
     price: number,
   ) {
-    await this.applyHoldingDelta(tx, userPortfolio, symbol, qty, price);
-    userPortfolio.cashBalance = subCash(
-      userPortfolio.cashBalance,
-      cost(qty, price),
-    );
-    await this.userPortfolios.save(userPortfolio, tx);
+    await this.applyHoldingDelta(tx, userPortfolio, planId, symbol, qty, price);
+    const fillCost = cost(qty, price);
+    if (plan) {
+      plan.cashBalance = subCash(plan.cashBalance, fillCost);
+      await this.plans.save(plan, tx);
+    } else {
+      userPortfolio.cashBalance = subCash(userPortfolio.cashBalance, fillCost);
+      await this.userPortfolios.save(userPortfolio, tx);
+    }
   }
 
   private async settleSell(
     tx: EntityManager,
     userPortfolio: UserPortfolio,
+    plan: any,
+    planId: string | null,
     symbol: string,
     qty: string,
     price: number,
@@ -136,20 +151,21 @@ export class OrderService {
     await this.applyHoldingDelta(
       tx,
       userPortfolio,
+      planId,
       symbol,
       d(qty).negated().toString(),
       price,
     );
-    userPortfolio.cashBalance = addCash(
-      userPortfolio.cashBalance,
-      cost(qty, price),
-    );
+    const fillCost = cost(qty, price);
+    // All SELL proceeds return to the global user cash wallet for simplicity
+    userPortfolio.cashBalance = addCash(userPortfolio.cashBalance, fillCost);
     await this.userPortfolios.save(userPortfolio, tx);
   }
 
   private async applyHoldingDelta(
     tx: EntityManager,
     userPortfolio: UserPortfolio,
+    planId: string | null,
     symbol: string,
     qtyDelta: string,
     price: number,
@@ -157,6 +173,7 @@ export class OrderService {
     const existing = await this.holdings.findByUserPortfolioAndSymbol(
       userPortfolio.id,
       symbol,
+      planId,
       tx,
     );
 
@@ -169,7 +186,7 @@ export class OrderService {
         );
       }
       const fresh = this.holdings.create(
-        { userPortfolio, symbol, quantity: qtyDelta, avgCost: String(price) },
+        { userPortfolio, symbol, quantity: qtyDelta, avgCost: String(price), planId },
         tx,
       );
       await this.holdings.save(fresh, tx);

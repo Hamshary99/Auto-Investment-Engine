@@ -7,6 +7,8 @@ import { OrderService } from "../../src/services/order.service";
 import { FakeOrderRepository } from "../fakes/fake-order.repository";
 import { FakeUserPortfolioRepository } from "../fakes/fake-user-portfolio.repository";
 import { FakeHoldingRepository } from "../fakes/fake-holding.repository";
+import { FakeAutoInvestPlanRepository } from "../fakes/fake-investment-plan.repositories";
+import { OrderSide } from "../../src/models/types";
 import { FakePublisher } from "../fakes/fake-publisher";
 import { FakeProcessedMessageRepository } from "../fakes/fake-processed-message.repository";
 import { FakeChannel } from "../fakes/fake-channel";
@@ -23,10 +25,11 @@ async function buildHarness() {
   const holdings = new FakeHoldingRepository();
   const publisher = new FakePublisher();
   const inbox = new FakeProcessedMessageRepository();
-  const orderService = new OrderService(orders, userPortfolios, holdings, publisher);
+  const plans = new FakeAutoInvestPlanRepository();
+  const orderService = new OrderService(orders, userPortfolios, holdings, publisher, plans);
 
   await startOrderExecutionConsumer(ctx, orderService, inbox);
-  const pendingOrder = await orderService.placeOrder(USER, { symbol: "AAPL", side: "BUY", quantity: 10 });
+  const pendingOrder = await orderService.placeOrder(USER, { symbol: "AAPL", side: OrderSide.BUY, quantity: 10 });
   return { channel, orders, userPortfolios, holdings, inbox, pendingOrder };
 }
 

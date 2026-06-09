@@ -1,4 +1,5 @@
 import { startReconciliationConsumer } from "../../src/consumers/reconciliation.consumer";
+import { OrderSide, OrderStatus } from "../../src/models/types";
 import { ReconciliationService } from "../../src/services/reconciliation.service";
 import { FakeOrderRepository } from "../fakes/fake-order.repository";
 import { FakeProcessedMessageRepository } from "../fakes/fake-processed-message.repository";
@@ -35,7 +36,7 @@ describe("reconciliation consumer", () => {
     // ── INPUT ─────────────────────────────────────────────────────────
     const { channel, orders } = await buildHarness();
     const stuck = await orders.create({
-      userId: USER, symbol: "AAPL", side: "BUY", quantity: "1", status: "PENDING",
+      userId: USER, symbol: "AAPL", side: OrderSide.BUY, quantity: "1", status: OrderStatus.PENDING,
       createdAt: new Date(Date.now() - 5 * HOUR), // well past the 1h SLA
     });
     const envelope = buildEnvelope({ forDate: "2026-05-12", messageId: "recon-msg-1" });

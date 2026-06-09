@@ -7,10 +7,13 @@ import { UserPortfolio } from "./index";
  * No productTypeId — positions merge by symbol across all subscriptions.
  */
 @Entity({ name: "holdings", schema: "portfolio" })
-@Unique(["userPortfolio", "symbol"])
+@Unique(["userPortfolio", "symbol", "planId"])
 export class Holding {
   @PrimaryGeneratedColumn("uuid")
   id!: string;
+
+  @Column({ type: "uuid", nullable: true })
+  planId?: string | null;
 
   @ManyToOne(() => UserPortfolio, (p) => p.holdings, { onDelete: "CASCADE" })
   userPortfolio!: UserPortfolio;

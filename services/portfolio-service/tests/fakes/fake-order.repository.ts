@@ -1,5 +1,6 @@
 import { randomUUID } from "crypto";
 import { Order } from "../../src/models/order.model";
+import { OrderSide, OrderStatus } from "../../src/models/types";
 import { OrderRepository } from "../../src/repository/order.repository";
 
 export class FakeOrderRepository extends OrderRepository {
@@ -31,7 +32,7 @@ export class FakeOrderRepository extends OrderRepository {
       side: input.side!,
       quantity: input.quantity!,
       executedPrice: input.executedPrice ?? null,
-      status: input.status ?? "PENDING",
+      status: input.status ?? OrderStatus.PENDING,
       failureReason: input.failureReason ?? null,
       createdAt: input.createdAt ?? new Date(),
       updatedAt: new Date(),

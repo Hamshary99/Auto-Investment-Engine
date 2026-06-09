@@ -21,16 +21,15 @@ jest.mock("../src/services/price.stub", () => ({
 
 import { randomUUID } from "crypto";
 import { SubscribedPortfolioService } from "../src/services/subscribed-portfolio.service";
-import { ProductTypeRepository } from "../src/repository/product-type.repository";
-import { AssociatedIndexFundRepository } from "../src/repository/associated-index-fund.repository";
+import { ProductTypeRepository, AssociatedIndexFundRepository } from "@auto-invest/shared";
 import { SubscribedPortfolioRepository } from "../src/repository/subscribed-portfolio.repository";
 import { UserPortfolioRepository } from "../src/repository/user-portfolio.repository";
 import { OrderService } from "../src/services/order.service";
-import { ProductType } from "../src/models/product-type.model";
-import { AssociatedIndexFund } from "../src/models/associated-index-fund.model";
+import { ProductType, AssociatedIndexFund } from "@auto-invest/shared";
 import { SubscribedPortfolio } from "../src/models/subscribed-portfolio.model";
 import { UserPortfolio } from "../src/models/user-portfolio.model";
-import { Order, OrderSide } from "../src/models/order.model";
+import { Order } from "../src/models/order.model";
+import { OrderSide } from "../src/models/types";
 
 const USER = "11111111-1111-1111-1111-111111111111";
 const PRODUCT_TYPE_ID = "22222222-2222-2222-2222-222222222222";
@@ -70,16 +69,16 @@ class FakeAssociatedIndexFundRepository extends AssociatedIndexFundRepository {
 
 class FakeSubscribedPortfolioRepository extends SubscribedPortfolioRepository {
   public rows: SubscribedPortfolio[] = [];
-  private find(userPortfolioId: string, productTypeId: string) {
+  private find(userPortfolioId: string, productTypeId: string, planId: string | null) {
     return this.rows.find(
-      (r) => r.userPortfolio.id === userPortfolioId && r.productType.id === productTypeId,
+      (r) => r.userPortfolio.id === userPortfolioId && r.productType.id === productTypeId && (r.planId || null) === (planId || null),
     );
   }
-  async findByUserPortfolioAndProductType(userPortfolioId: string, productTypeId: string) {
-    return this.find(userPortfolioId, productTypeId) ?? null;
+  async findByUserPortfolioAndProductType(userPortfolioId: string, productTypeId: string, planId: string | null = null) {
+    return this.find(userPortfolioId, productTypeId, planId) ?? null;
   }
-  async recordAddFund(userPortfolioId: string, productTypeId: string, amount: number) {
-    const existing = this.find(userPortfolioId, productTypeId);
+  async recordAddFund(userPortfolioId: string, productTypeId: string, amount: number, planId: string | null = null) {
+    const existing = this.find(userPortfolioId, productTypeId, planId);
     if (existing) {
       existing.investedAmount = (Number(existing.investedAmount) + amount).toFixed(2);
       return existing;
@@ -90,14 +89,15 @@ class FakeSubscribedPortfolioRepository extends SubscribedPortfolioRepository {
       productType: { id: productTypeId } as ProductType,
       investedAmount: amount.toFixed(2),
       redeemedAmount: "0.00",
+      planId: planId,
       createdAt: new Date(),
       updatedAt: new Date(),
     } as SubscribedPortfolio;
     this.rows.push(row);
     return row;
   }
-  async recordRedemption(userPortfolioId: string, productTypeId: string, amount: number) {
-    const existing = this.find(userPortfolioId, productTypeId);
+  async recordRedemption(userPortfolioId: string, productTypeId: string, amount: number, planId: string | null = null) {
+    const existing = this.find(userPortfolioId, productTypeId, planId);
     if (!existing) throw new Error("no subscribed_portfolio row");
     existing.redeemedAmount = (Number(existing.redeemedAmount) + amount).toFixed(2);
     return existing;
@@ -137,8 +137,8 @@ class FakeOrderService {
 }
 
 function buildSut() {
-  const productTypes = new FakeProductTypeRepository();
-  const associatedIndexFunds = new FakeAssociatedIndexFundRepository();
+  const productTypes = new FakeProductTypeRepository({} as any);
+  const associatedIndexFunds = new FakeAssociatedIndexFundRepository({} as any);
   const subscribedPortfolios = new FakeSubscribedPortfolioRepository();
   const userPortfolios = new FakeUserPortfolioRepository();
   const orderService = new FakeOrderService();
@@ -155,6 +155,7 @@ function buildSut() {
     associatedIndexFunds,
     subscribedPortfolios,
     userPortfolios,
+    {} as any,
     orderService as unknown as OrderService,
   );
   return { service, productTypes, associatedIndexFunds, subscribedPortfolios, orderService };

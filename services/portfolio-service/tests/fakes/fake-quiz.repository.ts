@@ -1,11 +1,13 @@
 import { randomUUID } from "crypto";
-import { QuizRepository } from "../../src/repository/quiz.repository";
-import { QuizQuestion } from "../../src/models/quiz-question.model";
-import { QuizAnswer } from "../../src/models/quiz-answer.model";
+import { QuizRepository, QuizQuestion, QuizAnswer } from "@auto-invest/shared";
 
 export class FakeQuizRepository extends QuizRepository {
   private questions = new Map<string, QuizQuestion>();
   private answers   = new Map<string, QuizAnswer>();
+
+  constructor(dataSource: any = {}) {
+    super(dataSource);
+  }
 
   // ── seed helpers ──────────────────────────────────────────────────────────
 

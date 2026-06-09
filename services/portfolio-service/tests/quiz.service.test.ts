@@ -23,7 +23,7 @@ function logTestIO(label: string, input: unknown, output: unknown) {
 
 function buildSut() {
   const repo    = new FakeQuizRepository();
-  const service = new QuizService(repo);
+  const service = new QuizService(repo as any);
   return { service, repo };
 }
 

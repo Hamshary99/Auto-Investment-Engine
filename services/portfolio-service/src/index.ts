@@ -47,6 +47,7 @@ import { buildInvestmentPlanRouter } from "./routes/investment-plan.routes";
 import { startOrderExecutionConsumer } from "./consumers/order-execution.consumer";
 import { startNavSnapshotConsumer } from "./consumers/nav-snapshot.consumer";
 import { startReconciliationConsumer } from "./consumers/reconciliation.consumer";
+import { startAutoInvestConsumer } from "./consumers/auto-invest.consumer";
 
 import { handleError } from "./utils/error.handler";
 import { logger } from "./utils/logger";
@@ -72,7 +73,7 @@ async function main() {
   const quizRepo = new QuizRepository(AppDataSource as any);
   const autoInvestPlanRepo = new AutoInvestPlanRepository();
 
-  const orderService = new OrderService(orderRepo, userPortfolioRepo, holdingRepo, publisher);
+  const orderService = new OrderService(orderRepo, userPortfolioRepo, holdingRepo, publisher, autoInvestPlanRepo);
   const navService = new NavService(userPortfolioRepo, navRepo);
   const reconService = new ReconciliationService(orderRepo);
   const subscribedPortfolioService = new SubscribedPortfolioService(
@@ -80,6 +81,7 @@ async function main() {
     associatedIndexFundRepo,
     subscribedPortfolioRepo,
     userPortfolioRepo,
+    autoInvestPlanRepo,
     orderService,
   );
   const quizService = new QuizService(quizRepo);
@@ -87,11 +89,13 @@ async function main() {
     autoInvestPlanRepo,
     productTypeRepo,
     riskTemplateRepo,
+    userPortfolioRepo,
   );
 
   await startOrderExecutionConsumer(rabbit, orderService, inbox);
   await startNavSnapshotConsumer(rabbit, navService, inbox);
   await startReconciliationConsumer(rabbit, reconService, inbox);
+  await startAutoInvestConsumer(rabbit, subscribedPortfolioService, autoInvestPlanRepo, inbox);
 
   const app = express();
   app.set("trust proxy", 1);
@@ -105,7 +109,7 @@ async function main() {
   app.use("/", buildOrdersRouter(orderService));
   app.use("/", buildProductTypeRouter(subscribedPortfolioService));
   app.use("/", buildQuizRouter(quizService));
-  app.use("/", buildInvestmentPlanRouter(investmentPlanService));
+  app.use("/", buildInvestmentPlanRouter(investmentPlanService, subscribedPortfolioService));
   app.use(handleError);
 
   app.listen(config.port, () => logger.info({ port: config.port }, "portfolio-service listening"));

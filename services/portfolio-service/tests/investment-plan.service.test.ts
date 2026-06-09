@@ -30,6 +30,7 @@ import {
   FakeProductTypeForPlanRepository,
   FakeRiskProfileTemplateRepository,
 } from "./fakes/fake-investment-plan.repositories";
+import { FakeUserPortfolioRepository } from "./fakes/fake-user-portfolio.repository";
 
 // ── shared pretty-printer ────────────────────────────────────────────────────
 
@@ -51,11 +52,13 @@ function buildSut() {
   const planRepo         = new FakeAutoInvestPlanRepository();
   const productTypeRepo  = new FakeProductTypeForPlanRepository(null as any);
   const riskTemplateRepo = new FakeRiskProfileTemplateRepository(null as any);
+  const userPortfolioRepo = new FakeUserPortfolioRepository();
 
   const service = new InvestmentPlanService(
     planRepo as any,
     productTypeRepo as any,
-    riskTemplateRepo as any
+    riskTemplateRepo as any,
+    userPortfolioRepo as any
   );
 
   // seed two active product types

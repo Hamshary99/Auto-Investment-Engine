@@ -1,4 +1,4 @@
-import { EntityManager, Repository } from "typeorm";
+import { EntityManager, Repository, IsNull } from "typeorm";
 import { AppDataSource } from "../data-source";
 import { SubscribedPortfolio } from "../models/index";
 import { Decimal } from "decimal.js";
@@ -11,12 +11,14 @@ export class SubscribedPortfolioRepository {
   findByUserPortfolioAndProductType(
     userPortfolioId: string,
     productTypeId: string,
+    planId: string | null = null,
     tx?: EntityManager,
   ): Promise<SubscribedPortfolio | null> {
     return this.repo(tx).findOne({
       where: {
         userPortfolio: { id: userPortfolioId },
         productType: { id: productTypeId },
+        planId: planId ?? IsNull(),
       },
       relations: ["userPortfolio", "productType"],
     });
@@ -33,10 +35,11 @@ export class SubscribedPortfolioRepository {
     userPortfolioId: string,
     productTypeId: string,
     amount: number,
+    planId: string | null = null,
     tx?: EntityManager,
   ): Promise<SubscribedPortfolio> {
     const r = this.repo(tx);
-    const existing = await this.findByUserPortfolioAndProductType(userPortfolioId, productTypeId, tx);
+    const existing = await this.findByUserPortfolioAndProductType(userPortfolioId, productTypeId, planId, tx);
     if (existing) {
       existing.investedAmount = new Decimal(existing.investedAmount).plus(amount).toFixed(2);
       return r.save(existing);
@@ -44,6 +47,7 @@ export class SubscribedPortfolioRepository {
     const row = r.create({
       userPortfolio: { id: userPortfolioId } as any,
       productType: { id: productTypeId } as any,
+      planId: planId,
       investedAmount: new Decimal(amount).toFixed(2),
       redeemedAmount: "0.00",
     });
@@ -54,10 +58,11 @@ export class SubscribedPortfolioRepository {
     userPortfolioId: string,
     productTypeId: string,
     amount: number,
+    planId: string | null = null,
     tx?: EntityManager,
   ): Promise<SubscribedPortfolio> {
     const r = this.repo(tx);
-    const existing = await this.findByUserPortfolioAndProductType(userPortfolioId, productTypeId, tx);
+    const existing = await this.findByUserPortfolioAndProductType(userPortfolioId, productTypeId, planId, tx);
     if (!existing) {
       throw new Error("no subscribed_portfolio row for this (user_portfolio, product_type)");
     }

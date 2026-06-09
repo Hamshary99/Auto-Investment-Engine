@@ -17,6 +17,10 @@ export class Order {
   @Column({ type: "uuid" })
   userId!: string;
 
+  @Index()
+  @Column({ type: "uuid", nullable: true })
+  planId?: string | null;
+
   @Column({ type: "varchar", length: 16 })
   symbol!: string;
 

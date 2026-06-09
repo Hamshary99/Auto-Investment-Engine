@@ -1,4 +1,4 @@
-import { EntityManager, Repository } from "typeorm";
+import { EntityManager, Repository, IsNull } from "typeorm";
 import { AppDataSource } from "../data-source";
 import { Holding, UserPortfolio } from "../models/index";
 
@@ -10,10 +10,11 @@ export class HoldingRepository {
   findByUserPortfolioAndSymbol(
     userPortfolioId: string,
     symbol: string,
+    planId: string | null = null,
     tx?: EntityManager,
   ): Promise<Holding | null> {
     return this.repo(tx).findOne({
-      where: { userPortfolio: { id: userPortfolioId }, symbol },
+      where: { userPortfolio: { id: userPortfolioId }, symbol, planId: planId ?? IsNull() },
       relations: { userPortfolio: true },
     });
   }
@@ -23,7 +24,7 @@ export class HoldingRepository {
   }
 
   create(
-    input: { userPortfolio: UserPortfolio; symbol: string; quantity: string; avgCost: string },
+    input: { userPortfolio: UserPortfolio; symbol: string; quantity: string; avgCost: string; planId?: string | null },
     tx?: EntityManager,
   ): Holding {
     return this.repo(tx).create(input);

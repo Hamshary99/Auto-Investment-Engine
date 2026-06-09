@@ -1,13 +1,16 @@
 import { NextFunction, Response } from "express";
 import { AuthedRequest } from "../middleware/auth.middleware";
-import { InvestmentPlanService } from "../services/index";
+import { InvestmentPlanService, SubscribedPortfolioService } from "../services/index";
 import { RiskProfile } from "../models/types";
 import { ApiError } from "../utils/error.handler";
 
 const isRiskProfile = (v: unknown): v is RiskProfile =>
   typeof v === "string" && (Object.values(RiskProfile) as string[]).includes(v);
 
-export const buildInvestmentPlanController = (service: InvestmentPlanService) => ({
+export const buildInvestmentPlanController = (
+  service: InvestmentPlanService,
+  subscribedPortfolioService: SubscribedPortfolioService
+) => ({
   listPlans: async (req: AuthedRequest, res: Response, next: NextFunction) => {
     try {
       const plans = await service.listPlansByUserId(req.userId!);
@@ -71,6 +74,28 @@ export const buildInvestmentPlanController = (service: InvestmentPlanService) =>
       const planId = String(req.params.id);
       await service.deletePlan(planId, req.userId!);
       res.status(204).send();
+    } catch (e) {
+      next(e);
+    }
+  },
+
+  fundPlan: async (req: AuthedRequest, res: Response, next: NextFunction) => {
+    try {
+      const planId = String(req.params.id);
+      const amount = Number(req.body.amount);
+      const plan = await service.fundPlan(planId, req.userId!, amount);
+      res.status(200).json(plan);
+    } catch (e) {
+      next(e);
+    }
+  },
+
+  withdrawFromPlan: async (req: AuthedRequest, res: Response, next: NextFunction) => {
+    try {
+      const planId = String(req.params.id);
+      const amount = Number(req.body.amount);
+      const orders = await subscribedPortfolioService.withdrawFromPlan(req.userId!, planId, amount);
+      res.status(200).json(orders);
     } catch (e) {
       next(e);
     }

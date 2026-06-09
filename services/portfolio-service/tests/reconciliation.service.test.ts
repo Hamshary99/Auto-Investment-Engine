@@ -1,3 +1,4 @@
+import { OrderSide, OrderStatus } from "../src/models/types";
 import { ReconciliationService } from "../src/services/reconciliation.service";
 import { FakeOrderRepository } from "./fakes/fake-order.repository";
 
@@ -20,7 +21,7 @@ describe("ReconciliationService.runForDate", () => {
     // ── INPUT ─────────────────────────────────────────────────────────
     const { service, orders } = buildSut();
     const stuck = await orders.create({
-      userId: USER, symbol: "AAPL", side: "BUY", quantity: "1", status: "PENDING",
+      userId: USER, symbol: "AAPL", side: OrderSide.BUY, quantity: "1", status: OrderStatus.PENDING,
       createdAt: new Date(Date.now() - 2 * HOUR), // older than threshold
     });
     const request = { forDate: "2026-05-12" };
@@ -42,7 +43,7 @@ describe("ReconciliationService.runForDate", () => {
     // ── INPUT ─────────────────────────────────────────────────────────
     const { service, orders } = buildSut();
     const recent = await orders.create({
-      userId: USER, symbol: "AAPL", side: "BUY", quantity: "1", status: "PENDING",
+      userId: USER, symbol: "AAPL", side: OrderSide.BUY, quantity: "1", status: OrderStatus.PENDING,
       createdAt: new Date(Date.now() - 10 * 60 * 1000), // 10 min ago
     });
 
@@ -60,11 +61,11 @@ describe("ReconciliationService.runForDate", () => {
     // ── INPUT ─────────────────────────────────────────────────────────
     const { service, orders } = buildSut();
     const executed = await orders.create({
-      userId: USER, symbol: "AAPL", side: "BUY", quantity: "1", status: "EXECUTED",
+      userId: USER, symbol: "AAPL", side: OrderSide.BUY, quantity: "1", status: OrderStatus.EXECUTED,
       createdAt: new Date(Date.now() - 10 * HOUR),
     });
     const failed = await orders.create({
-      userId: USER, symbol: "AAPL", side: "BUY", quantity: "1", status: "FAILED",
+      userId: USER, symbol: "AAPL", side: OrderSide.BUY, quantity: "1", status: OrderStatus.FAILED,
       createdAt: new Date(Date.now() - 10 * HOUR),
     });
 
