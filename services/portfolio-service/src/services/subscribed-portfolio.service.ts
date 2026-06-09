@@ -38,7 +38,17 @@ export class SubscribedPortfolioService {
     const mix = await this.associatedIndexFunds.findByProductTypeId(productTypeId);
     if (!mix.length) throw new Error("product type has no associated index funds");
 
-    const total = new Decimal(amount * (1 - reservePct));
+    const userPortfolio = await this.userPortfolios.findByUserId(userId);
+    if (!userPortfolio) throw new Error("user portfolio not found");
+
+    const cash = new Decimal(userPortfolio.cashBalance);
+    const investable = cash.mul(1 - reservePct);
+
+    if (new Decimal(amount).gt(investable)) {
+      throw new Error(`Cannot invest ${amount}: exceeds investable limit of ${investable.toFixed(2)}`);
+    }
+
+    const total = new Decimal(amount);
     const orders: Order[] = [];
 
     for (const row of mix) {
@@ -58,10 +68,7 @@ export class SubscribedPortfolioService {
     }
 
     if (orders.length) {
-      const userPortfolio = await this.userPortfolios.findByUserId(userId);
-      if (userPortfolio) {
-        await this.subscribedPortfolios.recordAddFund(userPortfolio.id, productTypeId, amount);
-      }
+      await this.subscribedPortfolios.recordAddFund(userPortfolio.id, productTypeId, amount);
     }
 
     return orders;
