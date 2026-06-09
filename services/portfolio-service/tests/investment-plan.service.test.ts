@@ -1,3 +1,4 @@
+/// <reference types="jest" />
 // ─────────────────────────────────────────────────────────────────────────────
 //  investment-plan.service.test.ts
 //
@@ -23,7 +24,7 @@ jest.mock("../src/data-source", () => ({
 import { InvestmentPlanService } from "../src/services/investment-plan.service";
 import { ApiError }              from "../src/utils/error.handler";
 import { RiskProfile }           from "../src/models/types";
-import { ProductType }           from "../src/models/product-type.model";
+import { ProductType }           from "../src/models/index";
 import {
   FakeAutoInvestPlanRepository,
   FakeProductTypeForPlanRepository,
@@ -48,10 +49,14 @@ const PT_EQUIT = "22222222-2222-2222-2222-222222222222";
 
 function buildSut() {
   const planRepo         = new FakeAutoInvestPlanRepository();
-  const productTypeRepo  = new FakeProductTypeForPlanRepository();
-  const riskTemplateRepo = new FakeRiskProfileTemplateRepository();
+  const productTypeRepo  = new FakeProductTypeForPlanRepository(null as any);
+  const riskTemplateRepo = new FakeRiskProfileTemplateRepository(null as any);
 
-  const service = new InvestmentPlanService(planRepo, productTypeRepo, riskTemplateRepo);
+  const service = new InvestmentPlanService(
+    planRepo as any,
+    productTypeRepo as any,
+    riskTemplateRepo as any
+  );
 
   // seed two active product types
   productTypeRepo.seed({ id: PT_BONDS, name: "Bonds",    isActive: true } as ProductType);
@@ -345,16 +350,15 @@ describe("InvestmentPlanService.createPlanFromRiskProfile", () => {
 // ════════════════════════════════════════════════════════════════════════════
 describe("InvestmentPlanService.updatePlanAllocations", () => {
 
-  it("replaces allocations and updates riskProfile", async () => {
+  it("replaces allocations without changing riskProfile", async () => {
     const { service } = buildSut();
     const plan = await service.createPlan({
-      userId: USER_A, name: "Initial", reservePct: 0.01, autoInvest: true, allocations: VALID_ALLOCATIONS,
+      userId: USER_A, name: "Initial", reservePct: 0.01, autoInvest: true, allocations: VALID_ALLOCATIONS, riskProfile: RiskProfile.Conservative
     });
 
     const input = {
       planId: plan.id,
       userId: USER_A,
-      riskProfile: RiskProfile.Aggressive,
       allocations: [
         { productTypeId: PT_BONDS, weight: 0.2 },
         { productTypeId: PT_EQUIT, weight: 0.8 },
@@ -370,8 +374,8 @@ describe("InvestmentPlanService.updatePlanAllocations", () => {
     });
 
     // ── EXPECTED OUTPUT ───────────────────────────────────────────────
-    // riskProfile updated; allocations replaced (still 2)
-    expect(output.riskProfile).toBe(RiskProfile.Aggressive);
+    // allocations replaced (still 2)
+    expect(output.riskProfile).toBe(RiskProfile.Conservative);
     expect(output.allocations).toHaveLength(2);
   });
 

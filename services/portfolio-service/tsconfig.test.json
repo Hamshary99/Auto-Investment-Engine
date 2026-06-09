@@ -6,7 +6,8 @@
     "paths": {
       "@auto-invest/shared": ["../../shared/src/index.ts"]
     },
-    "noEmit": true
+    "noEmit": true,
+    "types": ["jest", "node"]
   },
   "include": ["src/**/*", "tests/**/*"]
 }

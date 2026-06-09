@@ -43,4 +43,47 @@ export const buildInvestmentPlanController = (service: InvestmentPlanService) =>
       next(e);
     }
   },
+
+  updatePlanAllocations: async (req: AuthedRequest, res: Response, next: NextFunction) => {
+    try {
+      const planId = String(req.params.id);
+      const { allocations } = req.body ?? {};
+      const plan = await service.updatePlanAllocations({ planId, userId: req.userId!, allocations });
+      res.json(plan);
+    } catch (e) {
+      next(e);
+    }
+  },
+
+  updatePlanPreferences: async (req: AuthedRequest, res: Response, next: NextFunction) => {
+    try {
+      const planId = String(req.params.id);
+      const { name, reservePct, autoInvest } = req.body ?? {};
+      const plan = await service.updatePlanPreferences({ planId, userId: req.userId!, name, reservePct, autoInvest });
+      res.json(plan);
+    } catch (e) {
+      next(e);
+    }
+  },
+
+  deletePlan: async (req: AuthedRequest, res: Response, next: NextFunction) => {
+    try {
+      const planId = String(req.params.id);
+      await service.deletePlan(planId, req.userId!);
+      res.status(204).send();
+    } catch (e) {
+      next(e);
+    }
+  },
+
+  // TODO: create controller method
+  // manualAllocate: async (req: AuthedRequest, res: Response, next: NextFunction) => {
+  //   try {
+  //     const { planId, allocations } = req.body ?? {};
+  //     const plan = await service.manualAllocate(planId, req.userId!, allocations);
+  //     res.json(plan);
+  //   } catch (e) {
+  //     next(e);
+  //   }
+  // }
 });

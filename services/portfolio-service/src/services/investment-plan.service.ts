@@ -124,7 +124,6 @@ export class InvestmentPlanService {
   async updatePlanAllocations(input: {
     planId: string;
     userId: string;
-    riskProfile: RiskProfile;
     allocations: AllocationInput[];
   }): Promise<AutoInvestPlan> {
     const allocations = this.validateAllocations(input.allocations);
@@ -132,9 +131,6 @@ export class InvestmentPlanService {
     return AppDataSource.transaction(async (tx) => {
       const plan = await this.loadOwnedPlan(input.planId, input.userId, tx);
       await this.assertProductTypesActive(allocations, tx);
-
-      plan.riskProfile = input.riskProfile;
-      await this.planRepo.save(plan, tx);
 
       await this.planRepo.deleteAllocationsByPlanId(plan.id, tx);
       await this.planRepo.createAllocations(

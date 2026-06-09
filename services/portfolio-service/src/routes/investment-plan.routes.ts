@@ -11,5 +11,13 @@ export const buildInvestmentPlanRouter = (service: InvestmentPlanService) => {
   router.get("/plan/:id", requireAuth, c.getPlan);
   router.post("/plan/from-quiz", requireAuth, c.createFromQuiz);
 
+  router.put("/plan/:id/allocations", requireAuth, c.updatePlanAllocations);
+  router.patch("/plan/:id", requireAuth, c.updatePlanPreferences);
+
+  // TODO: create route method
+  // router.post("/plan/:id/manual-allocate", requireAuth, c.manualAllocate);
+
+  router.delete("/plan/:id", requireAuth, c.deletePlan);
+
   return router;
 };

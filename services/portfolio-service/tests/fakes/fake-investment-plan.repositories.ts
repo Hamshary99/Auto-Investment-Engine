@@ -1,14 +1,14 @@
 import { randomUUID } from "crypto";
 import {
   AutoInvestPlanRepository,
+} from "../../src/repository/index";
+import {
   ProductTypeRepository,
   RiskProfileTemplateRepository,
-} from "../../src/repository/index";
+} from "@auto-invest/shared";
 import { AutoInvestPlan }       from "../../src/models/auto-invest-plan.model";
 import { AutoInvestAllocation } from "../../src/models/auto-invest-allocation.model";
-import { ProductType }           from "../../src/models/product-type.model";
-import { RiskProfileTemplate }   from "../../src/models/risk-profile-template.model";
-import { RiskProfile }           from "../../src/models/types";
+import { ProductType, RiskProfileTemplate, RiskProfile } from "../../src/models/index";
 
 // ─── FakeAutoInvestPlanRepository ────────────────────────────────────────────
 
