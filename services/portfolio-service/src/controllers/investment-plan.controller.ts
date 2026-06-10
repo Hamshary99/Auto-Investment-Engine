@@ -22,7 +22,7 @@ export const buildInvestmentPlanController = (
 
   getPlan: async (req: AuthedRequest, res: Response, next: NextFunction) => {
     try {
-      const plan = await service.getPlanById(String(req.params.id), req.userId!);
+      const plan = await service.getPlanWithLiveValue(String(req.params.id), req.userId!);
       res.json(plan);
     } catch (e) {
       next(e);

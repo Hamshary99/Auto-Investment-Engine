@@ -25,8 +25,7 @@ export const buildProductTypeController = (service: SubscribedPortfolioService) 
     try {
       const productTypeId = String(req.params.id);
       const amount = Number(req.body.amount);
-      const reservePct = Number(req.body.reservePct) || 0.01;
-      const orders = await service.addFund(req.userId!, productTypeId, amount, reservePct);
+      const orders = await service.addFund(req.userId!, productTypeId, amount);
       res.status(202).json(orders);
     } catch (e) {
       next(e);

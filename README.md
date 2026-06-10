@@ -185,25 +185,44 @@ midnight recon ──publish reconciliation.requested──► PENDING > 1 h →
 | Manual addFund / redeem via product-type routes | ✅ Done |
 | `SubscribedPortfolio` dollar tracking | ✅ Done |
 | `RiskProfileTemplate` catalog (seeded by admin) | ✅ Done |
+| Scheduler broadcasting `auto.invest.requested` | ✅ Done |
+| Consumer orchestration (idempotency, reserve % checks) | ✅ Done |
 
-### What's planned (next milestone)
+### The RabbitMQ Event Loop
 
-The full auto-invest event loop is not yet wired:
+The full auto-invest loop runs asynchronously through RabbitMQ:
 
-```
-[planned] Scheduler publishes auto.invest.requested
-         │
-         ▼
-[planned] portfolio-service consumer (auto-invest.consumer.ts)
-         │  for each user where plan.autoInvest = true:
-         │    investable = cashBalance − cashBalance × reservePct
-         │    for each AutoInvestAllocation:
-         │      slice = investable × weight
-         │      SubscribedPortfolioService.addFund(userId, productTypeId, slice)
-         │      → places BUY orders per AssociatedIndexFund recipe
-         │
-         ▼ (already implemented)
-         order.created → order-execution consumer → Holding + cash update
+```mermaid
+sequenceDiagram
+    participant Cron as ⏰ Cron Timer
+    participant Sched as Scheduler Service
+    participant RMQ as 🐰 RabbitMQ
+    participant Consumer as Portfolio Service<br/>(auto-invest consumer)
+    participant DB as 🗄️ PostgreSQL
+
+    Note over Cron: Configurable via CRON_AUTO_INVEST
+    Cron->>Sched: tick!
+    Sched->>RMQ: publish("auto.invest.requested", { triggeredBy: "cron" })
+    Note over RMQ: Exchange routes message<br/>to "portfolio.auto-invest" queue
+
+    RMQ->>Consumer: deliver message
+    Consumer->>DB: inbox check (messageId)
+    Note over Consumer: First time? Continue.
+    Consumer->>DB: findAutoInvestEnabled()
+    DB-->>Consumer: [Plan A, Plan B, ...]
+
+    loop For each plan
+        Note over Consumer: investable = cashBalance × (1 - reservePct)
+        loop For each allocation (slice = investable × weight)
+            Consumer->>DB: addFund(userId, productType, slice)
+            Note over DB: Creates PENDING BUY orders
+        end
+    end
+
+    Consumer->>RMQ: ack ✅
+    Note over RMQ: Message removed from queue
+    
+    Note over DB, RMQ: (Later: order.created event triggers execution)
 ```
 
 **Worked example** (moderate plan, $10,000 cash, 1% reserve):
@@ -211,13 +230,15 @@ The full auto-invest event loop is not yet wired:
 - Allocations: 40% Tech Growth, 40% Savings, 20% Global — → $3,960 / $3,960 / $1,980
 - Tech Growth recipe: 80% VTI + 20% AAPL → BUY orders placed; VTI holdings merged with any existing position
 
+
 ---
 
-## Daily NAV
+## Daily NAV & Live Valuation
 
 At 21:00 UTC on weekdays the scheduler publishes `nav.snapshot.requested{forDate}`. The consumer computes `cash + Σ(qty × markPrice)` per user portfolio and `INSERT ... ON CONFLICT DO NOTHING` into `nav_snapshots(userPortfolioId, forDate)` — replays are safe.
 
-> **Note:** `markPrice` is currently stubbed to `holding.avgCost`. NAV therefore equals "cash + cost basis," not a real market valuation. Replace `markPrice` in [nav.service.ts](services/portfolio-service/src/services/nav.service.ts) with a real market-data call before going live.
+**Live Market Trends & Valuation:**
+The `MarketDataService` handles a simulated randomized walk for active product holdings, creating market volatility that varies by Risk Profile (e.g. up to 10% movement per tick for Aggressive profiles). The system dynamically compares the static Cost Basis (amount invested) with the real-time evaluation (`GET /plan/:id`) to calculate the live `absoluteReturn`.
 
 ---
 

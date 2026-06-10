@@ -22,3 +22,4 @@ HOLDINGS_AND_API_FLOW.md
 services/portfolio-service/src/models/*.md
 RABBITMQ_WALKTHROUGH.md
 codebase*
+dummy*

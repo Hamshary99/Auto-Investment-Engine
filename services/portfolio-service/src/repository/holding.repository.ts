@@ -19,6 +19,10 @@ export class HoldingRepository {
     });
   }
 
+  findByPlanId(planId: string, tx?: EntityManager): Promise<Holding[]> {
+    return this.repo(tx).find({ where: { planId } });
+  }
+
   save(h: Holding, tx?: EntityManager): Promise<Holding> {
     return this.repo(tx).save(h);
   }

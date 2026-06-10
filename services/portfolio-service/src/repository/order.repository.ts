@@ -19,6 +19,17 @@ export class OrderRepository {
     return this.repo(tx).findOne({ where: { id, userId } });
   }
 
+  findByUserId(userId: string, tx?: EntityManager): Promise<Order[]> {
+    return this.repo(tx).find({ where: { userId }, order: { createdAt: "DESC" } });
+  }
+
+  async hasPendingOrdersForPlan(planId: string, tx?: EntityManager): Promise<boolean> {
+    const count = await this.repo(tx).count({
+      where: { planId, status: OrderStatus.PENDING },
+    });
+    return count > 0;
+  }
+
   findStuckPending(cutoff: Date, tx?: EntityManager): Promise<Order[]> {
     return this.repo(tx).find({
       where: { status: OrderStatus.PENDING, createdAt: LessThan(cutoff) },

@@ -3,7 +3,8 @@ import { AppDataSource } from "../data-source";
 import { AutoInvestPlan, AutoInvestAllocation, ProductType } from "../models/index";
 import { RiskProfile } from "../models/types";
 import { ApiError } from "../utils/error.handler";
-import { AutoInvestPlanRepository, UserPortfolioRepository } from "../repository/index";
+import { AutoInvestPlanRepository, UserPortfolioRepository, HoldingRepository } from "../repository/index";
+import { MarketDataService } from "./market-data.service";
 import { ProductTypeRepository, RiskProfileTemplateRepository } from "@auto-invest/shared";
 import { Decimal } from "decimal.js";
 
@@ -17,7 +18,9 @@ export class InvestmentPlanService {
     private productTypeRepo: ProductTypeRepository,
     private riskTemplateRepo: RiskProfileTemplateRepository,
     private userPortfolioRepo: UserPortfolioRepository,
-  ) {}
+    private holdingRepo: HoldingRepository,
+    private marketDataService: MarketDataService,
+  ) { }
 
   listPlansByUserId(userId: string): Promise<AutoInvestPlan[]> {
     return this.planRepo.listByUserId(userId);
@@ -29,6 +32,37 @@ export class InvestmentPlanService {
       throw new ApiError("Investment plan not found", 404, "not_found");
     }
     return plan;
+  }
+
+  async getPlanWithLiveValue(planId: string, userId: string): Promise<AutoInvestPlan & { liveValue: string, totalInvested: string, absoluteReturn: string }> {
+    const plan = await this.getPlanById(planId, userId);
+    
+    const holdings = await this.holdingRepo.findByPlanId(planId);
+    
+    let holdingsValue = new Decimal(0);
+    for (const h of holdings) {
+      try {
+        const price = new Decimal(this.marketDataService.getPrice(h.symbol));
+        holdingsValue = holdingsValue.plus(new Decimal(h.quantity).mul(price));
+      } catch {
+        // Fallback if price missing
+        holdingsValue = holdingsValue.plus(new Decimal(h.quantity).mul(new Decimal(h.avgCost)));
+      }
+    }
+    
+    const liveValue = holdingsValue
+      .plus(new Decimal(plan.cashBalance || 0))
+      .plus(new Decimal(plan.reservedCash || 0))
+      .toFixed(2);
+      
+    const totalInvested = new Decimal(plan.investedAmount || 0)
+      .plus(new Decimal(plan.cashBalance || 0))
+      .plus(new Decimal(plan.reservedCash || 0))
+      .toFixed(2);
+      
+    const absoluteReturn = new Decimal(liveValue).minus(new Decimal(totalInvested)).toFixed(2);
+      
+    return { ...plan, liveValue, totalInvested, absoluteReturn };
   }
 
   listAutoInvestEnabledPlans(): Promise<AutoInvestPlan[]> {
@@ -173,7 +207,7 @@ export class InvestmentPlanService {
   //   allocations: AllocationInput[],
   //   tx?: EntityManager,
   // ): Promise<void> {
-    
+
   // }
 
   async fundPlan(planId: string, userId: string, amount: number): Promise<AutoInvestPlan> {
@@ -195,7 +229,12 @@ export class InvestmentPlanService {
       userPortfolio.cashBalance = new Decimal(userPortfolio.cashBalance).minus(amount).toFixed(2);
       await this.userPortfolioRepo.save(userPortfolio, tx);
 
-      plan.cashBalance = new Decimal(plan.cashBalance).plus(amount).toFixed(2);
+      const toReserve = new Decimal(amount).mul(plan.reservePct).toDecimalPlaces(2, Decimal.ROUND_HALF_UP);
+      const toInvest = new Decimal(amount).minus(toReserve);
+
+      plan.reservedCash = new Decimal(plan.reservedCash || "0").plus(toReserve).toFixed(2);
+      plan.cashBalance = new Decimal(plan.cashBalance).plus(toInvest).toFixed(2);
+      
       await this.planRepo.save(plan, tx);
 
       return plan;

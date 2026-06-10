@@ -5,7 +5,8 @@ import {
   Order,
   OrderSide,
   OrderStatus,
-  UserPortfolio
+  UserPortfolio,
+  AutoInvestPlan
 } from "../models/index";
 import {
   UserPortfolioRepository,
@@ -76,6 +77,10 @@ export class OrderService {
     return o;
   }
 
+  async listOrdersForUser(userId: string) {
+    return this.orders.findByUserId(userId);
+  }
+
   async executeOrderTx(
     tx: EntityManager,
     orderId: string,
@@ -87,8 +92,27 @@ export class OrderService {
     if (order.status !== OrderStatus.PENDING) return;
 
     try {
-      const userPortfolio = await this.ensureUserPortfolio(tx, order.userId);
-      const plan = order.planId ? await this.plans.findById(order.planId, tx) : null;
+      let userPortfolio = await tx.getRepository(UserPortfolio).findOne({
+        where: { userId: order.userId },
+        lock: { mode: "pessimistic_write" },
+      });
+      if (!userPortfolio) {
+        userPortfolio = await this.ensureUserPortfolio(tx, order.userId);
+        // Lock it after creation
+        userPortfolio = (await tx.getRepository(UserPortfolio).findOne({
+          where: { userId: order.userId },
+          lock: { mode: "pessimistic_write" },
+        }))!;
+      }
+
+      let plan = null;
+      if (order.planId) {
+        plan = await tx.getRepository(AutoInvestPlan).findOne({
+          where: { id: order.planId },
+          lock: { mode: "pessimistic_write" },
+        });
+        if (!plan) throw new Error("Plan missing during settlement");
+      }
 
       if (order.side === OrderSide.BUY) {
         await this.settleBuy(
@@ -114,7 +138,9 @@ export class OrderService {
 
       await this.markExecuted(tx, order, fillPrice);
     } catch (err: any) {
-      await this.markFailed(tx, order, err.message ?? "unknown");
+      // We must not use `tx` to mark failed, because `tx` might be aborted by Postgres 
+      // (e.g. if subCash threw an error). We use the main repository connection instead.
+      await this.markFailed(AppDataSource.manager, order, err.message ?? "unknown");
       throw err;
     }
   }
@@ -132,9 +158,20 @@ export class OrderService {
     const fillCost = cost(qty, price);
     if (plan) {
       plan.cashBalance = subCash(plan.cashBalance, fillCost);
+      if (d(plan.cashBalance).isNegative()) {
+        const deficit = d(plan.cashBalance).abs();
+        if (deficit.gt(0.05)) {
+          throw new ApiError("Insufficient funds to execute order due to price surge", 400);
+        }
+        plan.cashBalance = "0.00";
+      }
+      plan.investedAmount = addCash(plan.investedAmount || "0", fillCost);
       await this.plans.save(plan, tx);
     } else {
       userPortfolio.cashBalance = subCash(userPortfolio.cashBalance, fillCost);
+      if (d(userPortfolio.cashBalance).isNegative()) {
+        userPortfolio.cashBalance = "0.00";
+      }
       await this.userPortfolios.save(userPortfolio, tx);
     }
   }
@@ -148,6 +185,19 @@ export class OrderService {
     qty: string,
     price: number,
   ) {
+    let costBasisReduction = "0";
+    if (plan) {
+      const existing = await this.holdings.findByUserPortfolioAndSymbol(
+        userPortfolio.id,
+        symbol,
+        planId,
+        tx,
+      );
+      if (existing) {
+        costBasisReduction = cost(qty, existing.avgCost);
+      }
+    }
+
     await this.applyHoldingDelta(
       tx,
       userPortfolio,
@@ -160,6 +210,15 @@ export class OrderService {
     // All SELL proceeds return to the global user cash wallet for simplicity
     userPortfolio.cashBalance = addCash(userPortfolio.cashBalance, fillCost);
     await this.userPortfolios.save(userPortfolio, tx);
+
+    if (plan) {
+      plan.investedAmount = subCash(plan.investedAmount || "0", costBasisReduction);
+      // Ensure we don't drop below 0 due to precision errors
+      if (d(plan.investedAmount).isNegative()) {
+        plan.investedAmount = "0.00";
+      }
+      await this.plans.save(plan, tx);
+    }
   }
 
   private async applyHoldingDelta(
@@ -169,7 +228,8 @@ export class OrderService {
     symbol: string,
     qtyDelta: string,
     price: number,
-  ) {
+    retryCount = 0,
+  ): Promise<void> {
     const existing = await this.holdings.findByUserPortfolioAndSymbol(
       userPortfolio.id,
       symbol,
@@ -189,8 +249,18 @@ export class OrderService {
         { userPortfolio, symbol, quantity: qtyDelta, avgCost: String(price), planId },
         tx,
       );
-      await this.holdings.save(fresh, tx);
-      return;
+      try {
+        await this.holdings.save(fresh, tx);
+        return;
+      } catch (err: any) {
+        // 23505 is PostgreSQL unique constraint violation
+        if (err.code === "23505" && retryCount < 2) {
+          // Another transaction inserted the holding just now. 
+          // Retry the delta application so it updates the new row instead.
+          return this.applyHoldingDelta(tx, userPortfolio, planId, symbol, qtyDelta, price, retryCount + 1);
+        }
+        throw err;
+      }
     }
 
     const newQty = addShares(existing.quantity, qtyDelta);

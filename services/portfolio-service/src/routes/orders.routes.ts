@@ -10,6 +10,7 @@ export const buildOrdersRouter = (orders: OrderService) => {
   const c = buildOrdersController(orders);
 
   router.post("/orders",    requireAuth, validate(PlaceOrderDto), c.postOrder);
+  router.get("/orders",     requireAuth,                          c.getOrders);
   router.get("/orders/:id", requireAuth,                          c.getOrder);
 
   return router;

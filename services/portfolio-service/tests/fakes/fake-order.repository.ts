@@ -19,6 +19,10 @@ export class FakeOrderRepository extends OrderRepository {
     return [...this.byId.values()].filter((o) => o.status === "PENDING" && o.createdAt < cutoff);
   }
 
+  async hasPendingOrdersForPlan(planId: string): Promise<boolean> {
+    return [...this.byId.values()].some((o) => (o as any).planId === planId && o.status === "PENDING");
+  }
+
   async save(o: Order): Promise<Order> {
     this.byId.set(o.id, o);
     return o;

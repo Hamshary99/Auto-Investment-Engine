@@ -16,4 +16,11 @@ export const buildOrdersController = (orders: OrderService) => ({
       res.json(o);
     } catch (e) { next(e); }
   },
+
+  getOrders: async (req: AuthedRequest, res: Response, next: NextFunction) => {
+    try {
+      const list = await orders.listOrdersForUser(req.userId!);
+      res.json(list);
+    } catch (e) { next(e); }
+  },
 });

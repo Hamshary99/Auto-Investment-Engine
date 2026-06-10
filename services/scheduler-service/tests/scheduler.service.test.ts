@@ -54,6 +54,18 @@ describe("SchedulerService", () => {
     ]);
   });
 
+  it("requestAutoInvest: publishes auto.invest.requested with triggeredBy cron", async () => {
+    // ── INPUT / ACT ───────────────────────────────────────────────────
+    const { publisher, scheduler } = buildSut();
+    await scheduler.requestAutoInvest();
+
+    // ── EXPECTED OUTPUT ───────────────────────────────────────────────
+    // Broadcast payload — no planId or userId. Consumer fetches all enabled plans.
+    expect(publisher.published).toEqual([
+      { routingKey: ROUTING_KEYS.AUTO_INVEST_REQUESTED, payload: { triggeredBy: "cron" }, messageId: undefined },
+    ]);
+  });
+
   it("does not publish anything when no method is called (sanity)", () => {
     const { publisher } = buildSut();
     expect(publisher.published).toHaveLength(0);

@@ -21,6 +21,13 @@ async function main() {
   cron.schedule(config.cron.navSnapshot,    () => safe("nav-snapshot",    () => scheduler.requestNavSnapshot()));
   cron.schedule(config.cron.reconciliation, () => safe("reconciliation", () => scheduler.requestReconciliation()));
   cron.schedule(config.cron.orderSweep,     () => safe("order-sweep",    () => scheduler.requestOrderSweep()));
+  cron.schedule(config.cron.autoInvest,     () => safe("auto-invest",    () => scheduler.requestAutoInvest()));
+  if (process.env.NODE_ENV === "development" || process.env.NODE_ENV === "dev") {
+    cron.schedule(config.cron.marketTick, () => safe("market-tick", () => scheduler.requestMarketTick()));
+    logger.info("Market tick simulator enabled for development");
+  } else {
+    logger.info("Market tick simulator disabled (production mode expects real API feeds)");
+  }
 
   logger.info({ ...config.cron }, "scheduler-service started");
 }

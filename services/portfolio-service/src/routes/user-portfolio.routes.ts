@@ -13,6 +13,7 @@ export const buildUserPortfolioRouter = (
 
   router.get("/user-portfolio", requireAuth, c.getUserPortfolio);
   router.get("/nav", requireAuth, c.getNav);
+  router.post("/deposits", requireAuth, c.depositCash);
 
   return router;
 };

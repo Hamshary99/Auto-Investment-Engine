@@ -54,11 +54,16 @@ function buildSut() {
   const riskTemplateRepo = new FakeRiskProfileTemplateRepository(null as any);
   const userPortfolioRepo = new FakeUserPortfolioRepository();
 
+  const holdingRepo = { findByPlanId: jest.fn().mockResolvedValue([]) };
+  const marketDataService = { getPrice: jest.fn().mockReturnValue("100") };
+
   const service = new InvestmentPlanService(
     planRepo as any,
     productTypeRepo as any,
     riskTemplateRepo as any,
-    userPortfolioRepo as any
+    userPortfolioRepo as any,
+    holdingRepo as any,
+    marketDataService as any
   );
 
   // seed two active product types

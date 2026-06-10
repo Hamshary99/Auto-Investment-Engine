@@ -36,6 +36,7 @@ import {
   ReconciliationService,
   InvestmentPlanService,
   QuizService,
+  MarketDataService,
 } from "./services/index";
 
 import { buildUserPortfolioRouter } from "./routes/user-portfolio.routes";
@@ -43,11 +44,14 @@ import { buildOrdersRouter } from "./routes/orders.routes";
 import { buildProductTypeRouter } from "./routes/product-type.routes";
 import { buildQuizRouter } from "./routes/quiz.routes";
 import { buildInvestmentPlanRouter } from "./routes/investment-plan.routes";
+import { buildAutoInvestRouter } from "./routes/auto-invest.routes";
+import { buildMarketPricesRouter } from "./routes/market-prices.routes";
 
 import { startOrderExecutionConsumer } from "./consumers/order-execution.consumer";
 import { startNavSnapshotConsumer } from "./consumers/nav-snapshot.consumer";
 import { startReconciliationConsumer } from "./consumers/reconciliation.consumer";
 import { startAutoInvestConsumer } from "./consumers/auto-invest.consumer";
+import { startMarketTickConsumer } from "./consumers/market-tick.consumer";
 
 import { handleError } from "./utils/error.handler";
 import { logger } from "./utils/logger";
@@ -73,8 +77,12 @@ async function main() {
   const quizRepo = new QuizRepository(AppDataSource as any);
   const autoInvestPlanRepo = new AutoInvestPlanRepository();
 
+  // ── MarketDataService — initialize before dependent services ────────
+  const marketDataService = new MarketDataService(productTypeRepo, associatedIndexFundRepo);
+  await marketDataService.initialize();
+
   const orderService = new OrderService(orderRepo, userPortfolioRepo, holdingRepo, publisher, autoInvestPlanRepo);
-  const navService = new NavService(userPortfolioRepo, navRepo);
+  const navService = new NavService(userPortfolioRepo, navRepo, marketDataService);
   const reconService = new ReconciliationService(orderRepo);
   const subscribedPortfolioService = new SubscribedPortfolioService(
     productTypeRepo,
@@ -83,6 +91,7 @@ async function main() {
     userPortfolioRepo,
     autoInvestPlanRepo,
     orderService,
+    marketDataService,
   );
   const quizService = new QuizService(quizRepo);
   const investmentPlanService = new InvestmentPlanService(
@@ -90,13 +99,18 @@ async function main() {
     productTypeRepo,
     riskTemplateRepo,
     userPortfolioRepo,
+    holdingRepo,
+    marketDataService,
   );
 
-  await startOrderExecutionConsumer(rabbit, orderService, inbox);
+  // ── Consumers ──────────────────────────────────────────────────────
+  await startOrderExecutionConsumer(rabbit, orderService, marketDataService, inbox);
   await startNavSnapshotConsumer(rabbit, navService, inbox);
   await startReconciliationConsumer(rabbit, reconService, inbox);
-  await startAutoInvestConsumer(rabbit, subscribedPortfolioService, autoInvestPlanRepo, inbox);
+  await startAutoInvestConsumer(rabbit, subscribedPortfolioService, autoInvestPlanRepo, inbox, orderRepo);
+  await startMarketTickConsumer(rabbit, marketDataService, inbox);
 
+  // ── Express app ────────────────────────────────────────────────────
   const app = express();
   app.set("trust proxy", 1);
   app.use(helmet());
@@ -110,6 +124,8 @@ async function main() {
   app.use("/", buildProductTypeRouter(subscribedPortfolioService));
   app.use("/", buildQuizRouter(quizService));
   app.use("/", buildInvestmentPlanRouter(investmentPlanService, subscribedPortfolioService));
+  app.use("/", buildAutoInvestRouter(publisher, quizService, investmentPlanService, userPortfolioRepo));
+  app.use("/", buildMarketPricesRouter(marketDataService));
   app.use(handleError);
 
   app.listen(config.port, () => logger.info({ port: config.port }, "portfolio-service listening"));
@@ -128,3 +144,4 @@ main().catch((err) => {
   logger.error({ err }, "fatal");
   process.exit(1);
 });
+

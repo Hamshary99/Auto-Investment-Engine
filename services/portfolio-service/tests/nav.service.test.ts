@@ -7,8 +7,11 @@ const USER_A = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
 function buildSut() {
   const userPortfolios = new FakeUserPortfolioRepository();
   const snapshots = new FakeNavSnapshotRepository();
-  const service = new NavService(userPortfolios, snapshots);
-  return { service, userPortfolios, snapshots };
+  const marketData = {
+    getPrice: (symbol: string) => (symbol === "MSFT" ? 200 : 100),
+  } as any;
+  const service = new NavService(userPortfolios, snapshots, marketData);
+  return { service, userPortfolios, snapshots, marketData };
 }
 
 describe("NavService.snapshotAll", () => {

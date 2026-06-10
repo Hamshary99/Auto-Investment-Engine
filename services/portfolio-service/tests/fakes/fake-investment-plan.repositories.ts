@@ -45,6 +45,8 @@ export class FakeAutoInvestPlanRepository extends AutoInvestPlanRepository {
       riskProfile: input.riskProfile!,
       cashBalance: input.cashBalance ?? "0",
       reservePct:  input.reservePct ?? 0.01,
+      reservedCash: input.reservedCash ?? "0",
+      investedAmount: input.investedAmount ?? "0",
       autoInvest:  input.autoInvest ?? true,
       allocations: [],
       createdAt:   new Date(),

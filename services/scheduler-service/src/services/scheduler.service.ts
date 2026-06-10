@@ -28,8 +28,21 @@ export class SchedulerService {
     await this.publisher.publish(ROUTING_KEYS.ORDER_SWEEP_REQUESTED, { olderThanSeconds: 300 });
     logger.info("order sweep requested");
   }
+
+  /** Periodic — broadcast auto-invest trigger for all enabled plans */
+  async requestAutoInvest(): Promise<void> {
+    await this.publisher.publish(ROUTING_KEYS.AUTO_INVEST_REQUESTED, { triggeredBy: "cron" as const });
+    logger.info("auto invest requested");
+  }
+
+  /** Periodic (dev-only) — trigger market price random walk for all tracked symbols */
+  async requestMarketTick(): Promise<void> {
+    await this.publisher.publish(ROUTING_KEYS.MARKET_TICK_REQUESTED, { triggeredBy: "cron" as const });
+    logger.info("market tick requested");
+  }
 }
 
 function todayUtc(): string {
   return new Date().toISOString().slice(0, 10);
 }
+

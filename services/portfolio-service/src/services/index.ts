@@ -4,6 +4,7 @@ import { OrderService } from "./order.service";
 import { ReconciliationService } from "./reconciliation.service";
 import { InvestmentPlanService } from "./investment-plan.service";
 import { QuizService, QuizSubmissionItem } from "./quiz.service";
+import { MarketDataService } from "./market-data.service";
 
 export {
   SubscribedPortfolioService,
@@ -12,5 +13,6 @@ export {
   ReconciliationService,
   InvestmentPlanService,
   QuizService,
-  QuizSubmissionItem
+  QuizSubmissionItem,
+  MarketDataService,
 };

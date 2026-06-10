@@ -1,6 +1,12 @@
+// We cannot easily inject `userPortfolios` into the jest.mock because it is instantiated later.
+// However, we can use a global or we can mock AppDataSource inside the `buildHarness` function.
+// Since `AppDataSource` is an imported object, we can mutate its `transaction` method inside `buildHarness`.
+
 jest.mock("../../src/data-source", () => ({
-  AppDataSource: { transaction: jest.fn((cb: (tx: any) => Promise<any>) => cb(undefined)) },
+  AppDataSource: { transaction: jest.fn() },
 }));
+
+import { AppDataSource } from "../../src/data-source";
 
 import { startOrderExecutionConsumer } from "../../src/consumers/order-execution.consumer";
 import { OrderService } from "../../src/services/order.service";
@@ -28,7 +34,21 @@ async function buildHarness() {
   const plans = new FakeAutoInvestPlanRepository();
   const orderService = new OrderService(orders, userPortfolios, holdings, publisher, plans);
 
-  await startOrderExecutionConsumer(ctx, orderService, inbox);
+  (AppDataSource.transaction as jest.Mock).mockImplementation(async (cb) => {
+    const fakeTx = {
+      getRepository: (entity: any) => ({
+        findOne: async ({ where }: any) => {
+          if (entity.name === "UserPortfolio") return userPortfolios.findByUserId(where.userId);
+          if (entity.name === "AutoInvestPlan") return plans.findById(where.id);
+          return null;
+        },
+        save: async (val: any) => val,
+      }),
+    };
+    return cb(fakeTx);
+  });
+
+  await startOrderExecutionConsumer(ctx, orderService, {} as any, inbox);
   const pendingOrder = await orderService.placeOrder(USER, { symbol: "AAPL", side: OrderSide.BUY, quantity: 10 });
   return { channel, orders, userPortfolios, holdings, inbox, pendingOrder };
 }

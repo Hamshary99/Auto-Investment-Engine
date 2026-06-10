@@ -6,6 +6,8 @@ export const config = {
   cron: {
     navSnapshot: process.env.CRON_NAV_SNAPSHOT || "0 21 * * 1-5",
     reconciliation: process.env.CRON_RECONCILIATION || "0 0 * * *",
-    orderSweep: process.env.CRON_ORDER_SWEEP || "*/2 * * * *",
+    orderSweep: process.env.CRON_ORDER_SWEEP || "*/30 * * * * *",
+    autoInvest: process.env.CRON_AUTO_INVEST || "*/10 * * * * *",
+    marketTick: process.env.CRON_MARKET_TICK || "*/5 * * * *",
   },
 };

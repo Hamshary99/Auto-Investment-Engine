@@ -4,23 +4,9 @@ jest.mock("../src/data-source", () => ({
   },
 }));
 
-jest.mock("../src/services/price.stub", () => ({
-  getStubPrice: (symbol: string) => {
-    const map: Record<string, number> = {
-      AAPL: 180,
-      MSFT: 400,
-      NVDA: 400,
-      AAPL_R: 100,
-      MSFT_R: 200,
-    };
-    const p = map[symbol];
-    if (p == null) throw new Error(`no stub price for ${symbol}`);
-    return p;
-  },
-}));
-
 import { randomUUID } from "crypto";
 import { SubscribedPortfolioService } from "../src/services/subscribed-portfolio.service";
+import { MarketDataService } from "../src/services/market-data.service";
 import { ProductTypeRepository, AssociatedIndexFundRepository } from "@auto-invest/shared";
 import { SubscribedPortfolioRepository } from "../src/repository/subscribed-portfolio.repository";
 import { UserPortfolioRepository } from "../src/repository/user-portfolio.repository";
@@ -34,6 +20,22 @@ import { OrderSide } from "../src/models/types";
 const USER = "11111111-1111-1111-1111-111111111111";
 const PRODUCT_TYPE_ID = "22222222-2222-2222-2222-222222222222";
 const USER_PORTFOLIO_ID = "33333333-3333-3333-3333-333333333333";
+
+/** Fake MarketDataService that returns fixed prices for test determinism */
+class FakeMarketDataService {
+  private prices: Record<string, number> = {
+    AAPL: 180,
+    MSFT: 400,
+    NVDA: 400,
+    AAPL_R: 100,
+    MSFT_R: 200,
+  };
+  getPrice(symbol: string): number {
+    const p = this.prices[symbol];
+    if (p == null) return 100;
+    return p;
+  }
+}
 
 class FakeProductTypeRepository extends ProductTypeRepository {
   private byId = new Map<string, ProductType>();
@@ -142,6 +144,7 @@ function buildSut() {
   const subscribedPortfolios = new FakeSubscribedPortfolioRepository();
   const userPortfolios = new FakeUserPortfolioRepository();
   const orderService = new FakeOrderService();
+  const marketData = new FakeMarketDataService();
   userPortfolios.seed({
     id: USER_PORTFOLIO_ID,
     userId: USER,
@@ -157,6 +160,7 @@ function buildSut() {
     userPortfolios,
     {} as any,
     orderService as unknown as OrderService,
+    marketData as unknown as MarketDataService,
   );
   return { service, productTypes, associatedIndexFunds, subscribedPortfolios, orderService };
 }

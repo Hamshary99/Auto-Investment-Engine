@@ -14,7 +14,8 @@ async function buildHarness() {
   const userPortfolios = new FakeUserPortfolioRepository();
   const snapshots = new FakeNavSnapshotRepository();
   const inbox = new FakeProcessedMessageRepository();
-  const nav = new NavService(userPortfolios, snapshots);
+  const marketData = { getPrice: () => 100 } as any;
+  const nav = new NavService(userPortfolios, snapshots, marketData);
 
   const userPortfolio = await userPortfolios.create({ userId: USER, cashBalance: "1000.00" });
   userPortfolio.holdings = [

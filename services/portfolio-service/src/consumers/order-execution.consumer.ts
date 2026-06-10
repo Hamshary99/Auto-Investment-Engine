@@ -1,5 +1,6 @@
 import { AppDataSource } from "../data-source";
 import { OrderService } from "../services/order.service";
+import { MarketDataService } from "../services/market-data.service";
 import { ProcessedMessageRepository } from "../repository/processed-message.repository";
 import { config } from "../config";
 import { logger } from "../utils/logger";
@@ -18,10 +19,14 @@ import {
  *   2. OrderService.executeOrderTx      → state machine + holdings/cash updates
  * If anything throws, the whole tx rolls back, including the inbox row, so a
  * retry can re-process the message.
+ *
+ * Fill prices come from MarketDataService (dynamic, risk-weighted random walk)
+ * when no priceHint is provided in the event payload.
  */
 export async function startOrderExecutionConsumer(
   ctx: RabbitContext,
   orders: OrderService,
+  marketData: MarketDataService,
   inbox: ProcessedMessageRepository
 ) {
   await startConsumer<OrderCreatedPayload>(
@@ -39,15 +44,10 @@ export async function startOrderExecutionConsumer(
           logger.info({ messageId: env.messageId }, "duplicate order.created, skipping");
           return;
         }
-        const fillPrice = env.payload.priceHint ?? mockMarketPrice(env.payload.symbol);
+        const fillPrice = env.payload.priceHint ?? marketData.getPrice(env.payload.symbol);
         await orders.executeOrderTx(tx, env.payload.orderId, fillPrice);
       });
     }
   );
 }
 
-/** Deterministic stand-in for a real market-data lookup. Same symbol → same price. */
-function mockMarketPrice(symbol: string): number {
-  const seed = [...symbol].reduce((a, c) => a + c.charCodeAt(0), 0);
-  return 50 + (seed % 450);
-}

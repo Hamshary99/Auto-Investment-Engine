@@ -14,6 +14,8 @@ import { FakeHoldingRepository } from "./fakes/fake-holding.repository";
 import { FakePublisher } from "./fakes/fake-publisher";
 import { ROUTING_KEYS } from "@auto-invest/shared";
 import { OrderSide } from "../src/models/types";
+import { UserPortfolio } from "../src/models/user-portfolio.model";
+import { AutoInvestPlan } from "../src/models/auto-invest-plan.model";
 
 const USER = "11111111-1111-1111-1111-111111111111";
 const SEED_CASH = "100000.00";
@@ -24,7 +26,22 @@ function buildSut() {
   const holdings = new FakeHoldingRepository();
   const publisher = new FakePublisher();
   const service = new OrderService(orders, userPortfolios, holdings, publisher, {} as any);
-  return { service, orders, userPortfolios, holdings, publisher };
+  
+  const fakeTx = {
+    getRepository: (entity: any) => ({
+      findOne: async ({ where }: any) => {
+        if (entity === UserPortfolio || entity.name === "UserPortfolio") {
+          return userPortfolios.findByUserId(where.userId);
+        }
+        if (entity === AutoInvestPlan || entity.name === "AutoInvestPlan") {
+          return null;
+        }
+        return null;
+      }
+    })
+  } as any;
+
+  return { service, orders, userPortfolios, holdings, publisher, fakeTx };
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -93,12 +110,12 @@ describe("OrderService.findOrderForUser", () => {
 describe("OrderService.executeOrderTx", () => {
   it("BUY: creates a holding, decrements cash, transitions PENDING → EXECUTED", async () => {
     // ── INPUT ─────────────────────────────────────────────────────────
-    const { service, orders, userPortfolios, holdings } = buildSut();
+    const { service, orders, userPortfolios, holdings, fakeTx } = buildSut();
     const pending = await service.placeOrder(USER, { symbol: "AAPL", side: OrderSide.BUY, quantity: 10 });
     const fill = { orderId: pending.id, price: 150 };
 
     // ── ACT ───────────────────────────────────────────────────────────
-    await service.executeOrderTx(undefined as any, fill.orderId, fill.price);
+    await service.executeOrderTx(fakeTx, fill.orderId, fill.price);
 
     // ── EXPECTED OUTPUT ───────────────────────────────────────────────
     // order:     { status: "EXECUTED", executedPrice: "150" }
@@ -113,12 +130,12 @@ describe("OrderService.executeOrderTx", () => {
   it("BUY then BUY: weighted-average cost across two fills", async () => {
     // ── INPUT ─────────────────────────────────────────────────────────
     const fills = [{ qty: 10, price: 100 }, { qty: 10, price: 200 }];
-    const { service, userPortfolios, holdings } = buildSut();
+    const { service, userPortfolios, holdings, fakeTx } = buildSut();
 
     // ── ACT ───────────────────────────────────────────────────────────
     for (const f of fills) {
       const o = await service.placeOrder(USER, { symbol: "AAPL", side: OrderSide.BUY, quantity: f.qty });
-      await service.executeOrderTx(undefined as any, o.id, f.price);
+      await service.executeOrderTx(fakeTx, o.id, f.price);
     }
 
     // ── EXPECTED OUTPUT ───────────────────────────────────────────────
@@ -134,14 +151,14 @@ describe("OrderService.executeOrderTx", () => {
   it("SELL: decrements quantity, increments cash, avgCost unchanged", async () => {
     // ── INPUT ─────────────────────────────────────────────────────────
     // setup: own 10 AAPL @ avg 100
-    const { service, orders, userPortfolios, holdings } = buildSut();
+    const { service, orders, userPortfolios, holdings, fakeTx } = buildSut();
     const buy = await service.placeOrder(USER, { symbol: "AAPL", side: OrderSide.BUY, quantity: 10 });
-    await service.executeOrderTx(undefined as any, buy.id, 100);
+    await service.executeOrderTx(fakeTx, buy.id, 100);
     const sell = await service.placeOrder(USER, { symbol: "AAPL", side: OrderSide.SELL, quantity: 4 });
     const fill = { orderId: sell.id, price: 120 };
 
     // ── ACT ───────────────────────────────────────────────────────────
-    await service.executeOrderTx(undefined as any, fill.orderId, fill.price);
+    await service.executeOrderTx(fakeTx, fill.orderId, fill.price);
 
     // ── EXPECTED OUTPUT ───────────────────────────────────────────────
     // sell order:  EXECUTED
@@ -157,12 +174,12 @@ describe("OrderService.executeOrderTx", () => {
 
   it("SELL with no position: order goes FAILED with reason, no holding created", async () => {
     // ── INPUT ─────────────────────────────────────────────────────────
-    const { service, orders, userPortfolios, holdings } = buildSut();
+    const { service, orders, userPortfolios, holdings, fakeTx } = buildSut();
     const sell = await service.placeOrder(USER, { symbol: "TSLA", side: OrderSide.SELL, quantity: 1 });
 
     // ── ACT + EXPECTED OUTPUT ─────────────────────────────────────────
     // throws ApiError(400 "validation_error"); order goes FAILED with /no position/
-    const err = await service.executeOrderTx(undefined as any, sell.id, 100).catch((e) => e);
+    const err = await service.executeOrderTx(fakeTx, sell.id, 100).catch((e) => e);
     expect(err).toBeInstanceOf(ApiError);
     expect(err.statusCode).toBe(400);
 
@@ -176,13 +193,13 @@ describe("OrderService.executeOrderTx", () => {
 
   it("oversell: order goes FAILED, existing holding qty untouched", async () => {
     // ── INPUT ─────────────────────────────────────────────────────────
-    const { service, orders, userPortfolios, holdings } = buildSut();
+    const { service, orders, userPortfolios, holdings, fakeTx } = buildSut();
     const buy = await service.placeOrder(USER, { symbol: "AAPL", side: OrderSide.BUY, quantity: 5 });
-    await service.executeOrderTx(undefined as any, buy.id, 100);
+    await service.executeOrderTx(fakeTx, buy.id, 100);
     const oversell = await service.placeOrder(USER, { symbol: "AAPL", side: OrderSide.SELL, quantity: 999 });
 
     // ── ACT + EXPECTED OUTPUT ─────────────────────────────────────────
-    const err = await service.executeOrderTx(undefined as any, oversell.id, 100).catch((e) => e);
+    const err = await service.executeOrderTx(fakeTx, oversell.id, 100).catch((e) => e);
     expect(err).toBeInstanceOf(ApiError);
     expect(err.statusCode).toBe(400);
 
@@ -196,13 +213,13 @@ describe("OrderService.executeOrderTx", () => {
 
   it("already-terminal order is a no-op (replay-safe)", async () => {
     // ── INPUT ─────────────────────────────────────────────────────────
-    const { service, orders, userPortfolios } = buildSut();
+    const { service, orders, userPortfolios, fakeTx } = buildSut();
     const buy = await service.placeOrder(USER, { symbol: "AAPL", side: OrderSide.BUY, quantity: 1 });
-    await service.executeOrderTx(undefined as any, buy.id, 50);
+    await service.executeOrderTx(fakeTx, buy.id, 50);
     const cashAfterFirstFill = (await userPortfolios.findByUserId(USER))!.cashBalance;
 
     // ── ACT ───────────────────────────────────────────────────────────
-    await service.executeOrderTx(undefined as any, buy.id, 50);
+    await service.executeOrderTx(fakeTx, buy.id, 50);
 
     // ── EXPECTED OUTPUT ───────────────────────────────────────────────
     // cash unchanged from first fill (not double-debited); order still EXECUTED
@@ -211,8 +228,8 @@ describe("OrderService.executeOrderTx", () => {
   });
 
   it("unknown order id: throws ApiError(404)", async () => {
-    const { service } = buildSut();
-    const err = await service.executeOrderTx(undefined as any, "missing-id", 100).catch((e) => e);
+    const { service, fakeTx } = buildSut();
+    const err = await service.executeOrderTx(fakeTx, "missing-id", 100).catch((e) => e);
     expect(err).toBeInstanceOf(ApiError);
     expect(err.statusCode).toBe(404);
   });

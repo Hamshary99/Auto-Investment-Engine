@@ -28,6 +28,12 @@ export class AutoInvestPlan {
   @Column({ type: "numeric", precision: 18, scale: 2, default: 0 })
   cashBalance!: string;
 
+  @Column({ type: "numeric", precision: 18, scale: 2, default: 0 })
+  reservedCash!: string;
+
+  @Column({ type: "numeric", precision: 18, scale: 2, default: 0 })
+  investedAmount!: string;
+
   @Column({ type: "numeric", precision: 5, scale: 4, default: 0.01 })
   reservePct!: number;
 
