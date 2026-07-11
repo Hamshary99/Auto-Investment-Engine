@@ -24,3 +24,9 @@ RABBITMQ_WALKTHROUGH.md
 codebase*
 dummy*
 auto-invest-ownership-plan.md
+B4*.md
+Cron*.md
+implementation*.md
+phase*.md
+services/portfolio-service/src/models/MODELS.md
+plans*/
