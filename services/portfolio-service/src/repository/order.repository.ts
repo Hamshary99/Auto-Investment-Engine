@@ -36,6 +36,13 @@ export class OrderRepository {
     });
   }
 
+  async findStuckPendingWithLimit(cutoff: Date, limit: number, tx?: EntityManager): Promise<Order[]> {
+    return this.repo(tx).find({
+      where: { status: OrderStatus.PENDING, createdAt: LessThan(cutoff) },
+      take: limit,
+    });
+  }
+
   placeOrder(order: Partial<Order>, tx?: EntityManager): Promise<Order> {
     const o = this.repo(tx).create(order);
     return this.repo(tx).save(o);
@@ -43,6 +50,10 @@ export class OrderRepository {
 
   save(o: Order, tx?: EntityManager): Promise<Order> {
     return this.repo(tx).save(o);
+  }
+
+  async saveAll(orders: Order[], tx?: EntityManager): Promise<Order[]> {
+    return this.repo(tx).save(orders);
   }
 
   create(input: Partial<Order>, tx?: EntityManager): Promise<Order> {

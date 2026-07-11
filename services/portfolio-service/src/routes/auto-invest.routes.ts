@@ -15,9 +15,6 @@ import Decimal from "decimal.js";
  *   • Verifying the consumer pipeline end-to-end
  *   • Demos
  *
- * The event follows the exact same path as a cron-triggered one:
- *   POST /auto-invest/run  →  publisher  →  RabbitMQ  →  consumer
- *
  * NOTE: The response returns immediately after publishing. The actual
  * investment happens asynchronously in the consumer. Check logs or
  * query holdings/orders to see the results.

@@ -1,6 +1,9 @@
 export const config = {
   port: parseInt(process.env.PORTFOLIO_PORT || "3002", 10),
   jwtSecret: process.env.JWT_SECRET || "dev-secret",
+  reconciliation: {
+    pendingOrderStuckThresholdMs: parseInt(process.env.PENDING_ORDER_STUCK_THRESHOLD_MS || "86400000", 10),
+  },
   rabbit: {
     url: process.env.RABBITMQ_URL || "amqp://localhost",
     exchange: process.env.RABBITMQ_EXCHANGE || "auto-invest.events",
